@@ -352,11 +352,7 @@
       <div class="sec-head"><span class="sec-num">13</span><h2>Tell Me Something Good</h2></div>
       <div class="sec-desc">A little fun — your taste from a few different angles. Skip anything you like; there are no wrong answers. This is the stuff that helps us read a room the algorithms miss.</div>
 
-      <label class="fld">Songs that make you cringe — don't play <span class="hint">the guilty no's; these roll into your do-not-play list</span></label>
-      <div class="songs" data-songs="cringe"></div>
-      <button class="add" data-add="cringe">+ Add a cringe song</button>
-
-      <label class="fld" style="margin-top:22px">Embarrassing songs you'll still turn all the way up <span class="hint">be honest — this is where the floor gets loud</span></label>
+      <label class="fld">Embarrassing songs you'll still turn all the way up <span class="hint">be honest — this is where the floor gets loud</span></label>
       <div class="songs" data-songs="guiltyPleasure"></div>
       <button class="add" data-add="guiltyPleasure">+ Add a guilty pleasure</button>
 
@@ -408,8 +404,6 @@
 <script>
 (function(){
   // ===== CONFIG =====
-  // Paste your deployed Apps Script Web App URL here (ends in /exec).
-  // Leave as-is and the form falls back to download/copy mode.
   const ENDPOINT = "https://script.google.com/macros/s/AKfycbye93dPP_y45Qw3JDVlaExD34Vzt8x-1tE9pr1mIfNN8--K-oEOCyEvnmaK-z0KQxX9/exec";
   const LIVE = /^https:\/\/script\.google\.com\/.+\/exec/.test(ENDPOINT);
   // ==================
@@ -424,7 +418,6 @@
     const inp=document.createElement('input'); inp.type='text'; inp.value=val;
     inp.placeholder = group==='mustPlay' ? 'Song — artist (in priority order)' :
                       group==='doNotPlay' ? 'Song or artist to avoid' :
-                      group==='cringe' ? "Song or artist you can't stand" :
                       group==='guiltyPleasure' ? 'Song — artist' :
                       (group==='parentsArtists'||group==='highschoolArtists') ? 'Artist / band' :
                       'Song — artist  (or a link)';
@@ -441,8 +434,7 @@
     rows.forEach((r,i)=> r.querySelector('.idx').textContent=(i+1));
     if(group==='mustPlay'){ const c=$('#mustCount'); if(c) c.textContent=rows.length+' / 20'; }
   }
-  // seed one empty row per song group
-  ['prelude','cocktail','dinner','mustPlay','tryPlay','doNotPlay','cringe','guiltyPleasure','parentsArtists','highschoolArtists','lifeSongs'].forEach(g=>makeRow(g));
+  ['prelude','cocktail','dinner','mustPlay','tryPlay','doNotPlay','guiltyPleasure','parentsArtists','highschoolArtists','lifeSongs'].forEach(g=>makeRow(g));
   $$('[data-add]').forEach(b=> b.onclick=()=>{
     const g=b.dataset.add;
     if(g==='mustPlay' && $$('[data-songs="mustPlay"] .song-row').length>=20){ flash('20 is the max — keep it tight.'); return; }
@@ -498,7 +490,6 @@
   function updateProgress(){
     let filled=0,total=0;
     trackedInputs().forEach(i=>{ total++; if(i.value.trim()) filled++; });
-    // count vibe selections + genres + song groups as bonus signals
     const singles=Object.values(state.single).filter(Boolean).length; total+=3; filled+=Math.min(3,singles);
     const genres=(state.multi.danceGenres&&state.multi.danceGenres.size)?1:0; total+=1; filled+=genres;
     let songAny=0; ['prelude','cocktail','dinner','mustPlay'].forEach(g=>{ if($$(`[data-songs="${g}"] input`).some(x=>x.value.trim())) songAny++; });
@@ -518,7 +509,7 @@
     d.vibes.cocktail=state.single.cocktailVibe||null;
     d.vibes.dinner=state.single.dinnerVibe||null;
     d.dance.genres=state.multi.danceGenres?[...state.multi.danceGenres]:[];
-    ['prelude','cocktail','dinner','mustPlay','tryPlay','doNotPlay','cringe','guiltyPleasure','parentsArtists','highschoolArtists','lifeSongs'].forEach(g=>{
+    ['prelude','cocktail','dinner','mustPlay','tryPlay','doNotPlay','guiltyPleasure','parentsArtists','highschoolArtists','lifeSongs'].forEach(g=>{
       d.lists[g]=$$(`[data-songs="${g}"] input`).map(x=>x.value.trim()).filter(Boolean);
     });
     d.moments={}; ['fatherDaughter','motherSon','parentsDance','cake','bouquet','garter'].forEach(k=>{
@@ -553,8 +544,7 @@
     s+='\nDANCE FLOOR: '+(d.dance.genres.join(', ')||'DJ\'s Choice')+'\n'+line('  Last song',f.lastSong);
     s+='\nMUST-PLAY ('+L.mustPlay.length+')\n'+(L.mustPlay.map((x,i)=>'  '+(i+1)+'. '+x).join('\n')||'  —')+'\n';
     if(L.tryPlay.length) s+='\nTRY TO PLAY\n  '+L.tryPlay.join('\n  ')+'\n';
-    const avoid=[...L.doNotPlay, ...((L.cringe||[]).map(x=>x+'  (cringe)'))];
-    if(avoid.length) s+='\nDO NOT PLAY\n  '+avoid.join('\n  ')+'\n';
+    if(L.doNotPlay.length) s+='\nDO NOT PLAY\n  '+L.doNotPlay.join('\n  ')+'\n';
     s+='\nTHE COUPLE\n'+line('  Fav artist 1',f.fav1)+line('  Fav artist 2',f.fav2)+line('  Our song',f.ourSong)+line('  Notes',f.notes);
     const tm=[];
     if(L.guiltyPleasure&&L.guiltyPleasure.length) tm.push('  Turn-it-up guilty pleasures:\n    '+L.guiltyPleasure.join('\n    '));
@@ -573,14 +563,12 @@
   }
   function openModal(d){ $('#exportBox').value=pretty(d); window._export=d; $('#overlay').classList.add('open'); }
 
-  // "Save a copy" — always manual, never posts
   $('#draftBtn').onclick=()=>{
     const d=collect();
     setModal('Your copy','Your soundtrack, captured.','Download the file or copy the text below to keep for your records. Whenever you’re ready, hit <strong>Send to Savvy Sounds</strong>.');
     openModal(d);
   };
 
-  // "Send to Savvy Sounds" — submits to the sheet if live, else manual
   $('#genBtn').onclick=async ()=>{
     const d=collect();
     if(!d.fields.partner1 && !d.fields.partner2){ flash('Add at least one of your names first.'); return; }
