@@ -1,0 +1,1413 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Quality Check — is your music really what it says it is?</title>
+<style>
+:root {
+  color-scheme: light dark;
+  --bg: #FFFFFF;
+  --surface: #F5F5F7;
+  --line: #D8D8DE;
+  --ink: #1A1A1F;
+  --ink-soft: #55555F;
+  --ink-quiet: #6E6E78;
+  --accent: #0B5FD8;
+  --accent-ink: #FFFFFF;
+  --bad: #B3261E;
+  --bad-bg: #FBECEA;
+  --watch: #8A5300;
+  --watch-bg: #FCF3E4;
+  --good: #17603A;
+  --radius: 12px;
+  --tap: 44px;
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #101014;
+    --surface: #1C1C22;
+    --line: #34343D;
+    --ink: #F2F2F5;
+    --ink-soft: #C2C2CC;
+    --ink-quiet: #9A9AA6;
+    --accent: #6BA3FF;
+    --accent-ink: #101014;
+    --bad: #FF9A90;
+    --bad-bg: #2E1A18;
+    --watch: #F0C27A;
+    --watch-bg: #2B2313;
+    --good: #7FD0A3;
+  }
+}
+* { box-sizing: border-box; }
+html, body { margin: 0; padding: 0; }
+body {
+  background: var(--bg);
+  color: var(--ink);
+  font: 17px/1.5 -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+main { max-width: 44rem; margin: 0 auto; padding: 2.5rem 1.25rem 5rem; }
+h1 { font-size: 2rem; line-height: 1.15; letter-spacing: -0.02em; margin: 0 0 0.75rem; }
+h2 { font-size: 1.3rem; line-height: 1.25; letter-spacing: -0.01em; margin: 2rem 0 0.5rem; }
+p { margin: 0 0 1rem; color: var(--ink-soft); }
+.lede { font-size: 1.15rem; color: var(--ink-soft); }
+.screen[hidden] { display: none; }
+
+button {
+  font: inherit;
+  min-height: var(--tap);
+  border-radius: var(--radius);
+  border: 1px solid transparent;
+  padding: 0.7rem 1.15rem;
+  cursor: pointer;
+}
+.primary { background: var(--accent); color: var(--accent-ink); font-weight: 600; }
+.secondary { background: transparent; color: var(--accent); border-color: var(--line); }
+.primary:hover, .secondary:hover { filter: brightness(1.06); }
+:focus-visible { outline: 3px solid var(--accent); outline-offset: 2px; }
+
+.promise { background: var(--surface); border-radius: var(--radius); padding: 1rem 1.25rem; margin: 0 0 1.75rem; }
+.promise ul { margin: 0; padding-left: 1.1rem; color: var(--ink-soft); }
+.promise li { margin: 0.35rem 0; }
+
+.crates { list-style: none; margin: 0.5rem 0 0; padding: 0; }
+.crates li { margin: 0 0 0.5rem; }
+.crate {
+  display: flex; align-items: baseline; gap: 0.75rem; width: 100%;
+  text-align: left; background: var(--surface); border: 1px solid var(--line);
+  color: var(--ink);
+}
+.crate:hover:not(:disabled) { border-color: var(--accent); }
+.crate:disabled { opacity: 0.55; cursor: default; }
+.crate .where { color: var(--ink-quiet); font-size: 0.85rem; display: block; }
+.crate .name { font-weight: 600; flex: 1; }
+.crate .count { color: var(--ink-quiet); font-size: 0.9rem; white-space: nowrap; }
+
+.bar { height: 8px; background: var(--surface); border-radius: 99px; overflow: hidden; margin: 0.75rem 0; }
+.bar div { height: 100%; background: var(--accent); width: 0; transition: width 0.2s linear; }
+@media (prefers-reduced-motion: reduce) {
+  * { animation: none !important; transition: none !important; scroll-behavior: auto !important; }
+}
+
+.result { border-top: 1px solid var(--line); padding: 0.85rem 0; }
+.result:first-of-type { border-top: 0; }
+.song { font-weight: 600; overflow-wrap: anywhere; }
+.verdict { font-size: 0.95rem; margin-top: 0.15rem; }
+.tag { display: inline-block; border-radius: 99px; padding: 0.1rem 0.6rem; font-size: 0.8rem; font-weight: 600; }
+.tag.bad { background: var(--bad-bg); color: var(--bad); }
+.tag.watch { background: var(--watch-bg); color: var(--watch); }
+.clear { color: var(--good); font-weight: 600; font-size: 1.15rem; }
+.quiet { color: var(--ink-quiet); font-size: 0.9rem; }
+details { margin-top: 1.25rem; }
+summary { cursor: pointer; min-height: var(--tap); display: flex; align-items: center; color: var(--accent); }
+.miss { color: var(--ink-quiet); font-size: 0.9rem; margin: 0.2rem 0; overflow-wrap: anywhere; }
+.row { display: flex; gap: 0.75rem; flex-wrap: wrap; align-items: center; }
+.note {
+  background: var(--watch-bg); color: var(--watch); border-radius: var(--radius);
+  padding: 0.75rem 1rem; margin: 0 0 1.5rem; font-size: 0.95rem;
+}
+.note[hidden] { display: none; }
+.sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+</style>
+</head>
+<body>
+<main>
+
+<p id="note" class="note" role="alert" hidden></p>
+
+<section id="start" class="screen">
+  <h1>Is your music really what it says it is?</h1>
+  <p class="lede">Some files claim 320 or lossless and are really a 128 in a nicer jacket.
+     You can’t always hear it in the booth. This listens to your songs and tells you which
+     ones are lying.</p>
+  <div class="promise">
+    <ul>
+      <li>It reads your files. It never changes, moves or deletes anything.</li>
+      <li>Nothing leaves this computer. No upload, no account, no internet.</li>
+      <li>If it finds your Serato crates, it checks the songs you actually play first.</li>
+    </ul>
+  </div>
+  <div class="row">
+    <button id="pick" class="primary">Point me at your music folder</button>
+  </div>
+</section>
+
+<section id="choose" class="screen" hidden>
+  <h1>What should I listen to?</h1>
+  <p id="found-line" class="lede"></p>
+  <div id="no-serato" hidden>
+    <p>I couldn’t find Serato crates in that folder. On a Mac they usually live in
+       <strong>Music</strong>, in a folder called <strong>_Serato_</strong> — which might not be
+       where your songs are.</p>
+    <div class="row">
+      <button id="pick-serato" class="primary">Point me at my Serato folder</button>
+      <button id="skip-serato" class="secondary">Just check this folder</button>
+    </div>
+  </div>
+  <div id="crate-list-wrap" hidden>
+    <h2>Your crates</h2>
+    <p class="quiet">Pick one to start. You can do another straight after.</p>
+    <ul id="crate-list" class="crates"></ul>
+    <div id="all-wrap">
+      <h2>Or the lot</h2>
+      <div class="row">
+        <button id="check-all" class="secondary"></button>
+      </div>
+    </div>
+  </div>
+  <div class="row" style="margin-top:2rem">
+    <button id="repick" class="secondary">Choose a different folder</button>
+  </div>
+</section>
+
+<section id="listening" class="screen" hidden>
+  <h1 id="listening-title">Listening…</h1>
+  <div class="bar" aria-hidden="true"><div id="bar-fill"></div></div>
+  <p id="progress" aria-live="polite"></p>
+  <div class="row">
+    <button id="stop" class="secondary">Stop</button>
+  </div>
+  <h2 class="sr-only">Found so far</h2>
+  <div id="live-results"></div>
+</section>
+
+<section id="done" class="screen" hidden>
+  <h1 id="done-title">Done</h1>
+  <p id="done-line" class="lede"></p>
+  <div id="results"></div>
+  <details id="unheard-wrap" hidden>
+    <summary id="unheard-summary"></summary>
+    <div id="unheard"></div>
+  </details>
+  <details id="missing-wrap" hidden>
+    <summary id="missing-summary"></summary>
+    <div id="missing"></div>
+  </details>
+  <div class="row" style="margin-top:2rem">
+    <button id="again" class="primary">Check another crate</button>
+  </div>
+
+  <h2>Anything odd?</h2>
+  <p>This is a beta. If it called a song a fake and you know it isn’t — or it
+     missed one you know is dodgy — that’s the most useful thing you can tell
+     me. Copy the summary below and send it however we normally talk.</p>
+  <div class="row">
+    <button id="copy" class="secondary">Copy what it found</button>
+    <span id="copied" class="quiet" role="status"></span>
+  </div>
+</section>
+
+</main>
+
+<script type="module">
+// ---- rate.js -----------------------------------------------------
+// A file's real sample rate, read from its own first bytes.
+//
+// Why this exists: a browser decodes audio into whatever rate its
+// AudioContext runs at, NOT the rate the file was made at. That matters
+// twice. The Nyquist guard in the ear needs the true rate — a 32 kHz file
+// physically cannot hold anything above 16 kHz, and judged as if it were
+// 44.1 kHz its honest ceiling reads as a brick wall and an old recording
+// gets called a fake. And decoding at the file's own rate is the only way
+// to reproduce the readings the maps were fitted against; anything else
+// resamples, and a resampler leaves a wall of its own near the old Nyquist.
+//
+// So the page reads the rate here first, then decodes in a context built at
+// exactly that rate. A file whose rate cannot be read is reported as
+// "couldn't listen to this one" rather than guessed at.
+//
+// Only the first few kilobytes are ever needed, which is why this takes a
+// slice rather than the whole song.
+
+const MPEG_RATES = [
+  [11025, 12000, 8000],     // MPEG 2.5
+  [null, null, null],
+  [22050, 24000, 16000],    // MPEG 2
+  [44100, 48000, 32000],    // MPEG 1
+];
+
+const ascii = (b, i, n) => String.fromCharCode(...b.slice(i, i + n));
+const be32 = (b, i) => (b[i] << 24 >>> 0) + (b[i + 1] << 16) + (b[i + 2] << 8) + b[i + 3];
+const le32 = (b, i) => b[i] + (b[i + 1] << 8) + (b[i + 2] << 16) + (b[i + 3] << 24 >>> 0);
+
+// ID3v2 tags sit in front of MP3s and are legal in front of FLACs too. The
+// size is four 7-bit bytes — the top bit of each is always clear so the tag
+// can never contain a false frame sync.
+function afterID3(b) {
+  if (b.length < 10 || ascii(b, 0, 3) !== "ID3") return 0;
+  const size = (b[6] & 0x7f) * 2097152 + (b[7] & 0x7f) * 16384 +
+               (b[8] & 0x7f) * 128 + (b[9] & 0x7f);
+  return 10 + size + ((b[5] & 0x10) ? 10 : 0);   // footer, when flagged
+}
+
+function wav(b) {
+  if (ascii(b, 0, 4) !== "RIFF" || ascii(b, 8, 4) !== "WAVE") return null;
+  let i = 12;
+  while (i + 8 <= b.length) {
+    const id = ascii(b, i, 4), size = le32(b, i + 4);
+    if (id === "fmt ") return le32(b, i + 12) || null;
+    if (size <= 0) return null;
+    i += 8 + size + (size & 1);          // chunks are word-aligned
+  }
+  return null;
+}
+
+function flac(b, start) {
+  if (ascii(b, start, 4) !== "fLaC") return null;
+  // First metadata block is always STREAMINFO. Its sample rate is the 20
+  // bits beginning at byte 10 of the block body.
+  const i = start + 4 + 4 + 10;
+  if (i + 3 > b.length) return null;
+  return ((b[i] << 12) | (b[i + 1] << 4) | (b[i + 2] >> 4)) || null;
+}
+
+function mp3(b, start) {
+  // Walk to the first real frame sync. A tag byte can look like one, so the
+  // version and layer fields have to be legal too.
+  for (let i = start; i + 4 <= b.length && i < start + 200000; i++) {
+    if (b[i] !== 0xff || (b[i + 1] & 0xe0) !== 0xe0) continue;
+    const version = (b[i + 1] >> 3) & 0x03;
+    const layer = (b[i + 1] >> 1) & 0x03;
+    const rate = (b[i + 2] >> 2) & 0x03;
+    if (layer === 0 || rate === 3 || version === 1) continue;
+    const hz = MPEG_RATES[version][rate];
+    if (hz) return hz;
+  }
+  return null;
+}
+
+// MP4/M4A: the rate lives in the audio track's mdhd timescale. Boxes are
+// [4 bytes length][4 bytes name], and the ones on the way down are
+// containers, so this walks into them rather than over them.
+const MP4_CONTAINERS = new Set(["moov", "trak", "mdia", "minf", "stbl", "udta"]);
+function mp4(b, start, end) {
+  let i = start;
+  while (i + 8 <= end) {
+    let size = be32(b, i);
+    const name = ascii(b, i + 4, 4);
+    if (size === 1) return null;              // 64-bit box, not worth chasing
+    if (size === 0) size = end - i;
+    if (size < 8) return null;
+    if (name === "mdhd") {
+      const v = b[i + 8];
+      const at = i + 8 + (v === 1 ? 4 + 16 : 4 + 8);
+      if (at + 4 > end) return null;
+      const hz = be32(b, at);
+      // A track's timescale is its own clock; for the audio track it is the
+      // sample rate. Video and hint tracks use 600, 1000, 90000 and such.
+      if (hz >= 8000 && hz <= 384000) return hz;
+    }
+    if (MP4_CONTAINERS.has(name)) {
+      const inner = mp4(b, i + 8, Math.min(end, i + size));
+      if (inner) return inner;
+    }
+    i += size;
+  }
+  return null;
+}
+
+// An .m4a routinely keeps its header (moov) at the END of the file, after
+// the audio — 17 of Miles's 51 sampled m4a files do. There is no walking to
+// it from the front, so when the structured walk finds nothing the caller
+// hands over a slice of the tail and this scans it for the mdhd box
+// directly. The rate still has to be a plausible audio clock to be
+// believed, which is what keeps a chance byte pattern from being read as an
+// answer.
+function scanForMdhd(b) {
+  for (let i = 0; i + 24 <= b.length; i++) {
+    if (b[i] !== 0x6d || b[i + 1] !== 0x64 || b[i + 2] !== 0x68 || b[i + 3] !== 0x64) continue;
+    const v = b[i + 4];
+    const at = i + 4 + (v === 1 ? 4 + 16 : 4 + 8);
+    if (at + 4 > b.length) continue;
+    const hz = be32(b, at);
+    if (hz >= 8000 && hz <= 384000) return hz;
+  }
+  return null;
+}
+
+function ogg(b) {
+  if (ascii(b, 0, 4) !== "OggS") return null;
+  for (let i = 0; i + 4 < b.length && i < 65536; i++) {
+    if (ascii(b, i, 6) === "vorbis") return le32(b, i + 11) || null;
+    if (ascii(b, i, 8) === "OpusHead") return 48000;   // Opus always decodes at 48k
+  }
+  return null;
+}
+
+// How much of the file to read before asking. An ID3 tag carrying artwork
+// sits in FRONT of the audio and is routinely bigger than a fixed guess —
+// 289 KB on one of Miles's, and 60 of his 335 sampled files read as
+// "unknown rate" on a flat 64 KB slice for exactly that reason. So the
+// caller reads the first 16 bytes, asks how far the tag runs, and reads
+// that much plus enough audio to find a frame.
+function bytesNeeded(head) {
+  return afterID3(head) + 65536;
+}
+
+// bytes: a Uint8Array of the START of the file, at least bytesNeeded() long.
+// Returns the rate in Hz, or null when it cannot be read, which the caller
+// must treat as "couldn't listen", never as a default.
+function sampleRateOf(bytes) {
+  const b = bytes;
+  if (b.length < 12) return null;
+  const skip = afterID3(b);
+  if (ascii(b, 0, 4) === "RIFF") return wav(b);
+  if (ascii(b, 0, 4) === "OggS") return ogg(b);
+  if (ascii(b, skip, 4) === "fLaC") return flac(b, skip);
+  if (ascii(b, 4, 4) === "ftyp") return mp4(b, 0, b.length);
+  return mp3(b, skip);
+}
+// ---- crates.js ---------------------------------------------------
+// Reading a DJ's Serato crates, in the browser, with nothing installed.
+//
+// A .crate file is a flat run of chunks: four ASCII bytes of tag, four
+// big-endian bytes of length, then that many bytes of payload. Text
+// payloads are UTF-16 big-endian. Nesting happens exactly once — an "otrk"
+// chunk's payload is itself a run of chunks, and the one that matters is
+// "ptrk", the song's path.
+//
+// Measured on Miles's own 125 crates (2026-08-24): 31,945 song entries,
+// 8,507 different songs, and the only tags that ever appear are vrsn, osrt,
+// ovct and otrk, with nothing but ptrk inside otrk. Everything else is
+// skipped by length rather than parsed, which is why an unknown tag from a
+// newer Serato costs nothing.
+//
+// Nothing here writes. The _Serato_ folder is opened read-only and stays
+// that way.
+
+const TAG = 4, LEN = 4, HEAD = TAG + LEN;
+
+// Walk the chunks in a byte range, handing each one to fn. A crate from a
+// stranger's laptop is untrusted input: a length that runs past the end of
+// the buffer stops the walk instead of throwing, so a half-synced or
+// truncated crate reads as the songs it did contain rather than as an
+// error page.
+function eachChunk(view, start, end, fn) {
+  let i = start;
+  while (i + HEAD <= end) {
+    let tag = "";
+    for (let k = 0; k < TAG; k++) tag += String.fromCharCode(view.getUint8(i + k));
+    const len = view.getUint32(i + TAG, false);
+    const from = i + HEAD, to = from + len;
+    if (len < 0 || to > end) return;          // truncated — keep what we have
+    fn(tag, from, to);
+    i = to;
+  }
+}
+
+// UTF-16BE, the only text encoding a crate uses. Decoded to NFC because
+// macOS hands out filenames in NFD: "Beyoncé" written by Serato and
+// "Beyoncé" read from the picked folder are different byte strings
+// otherwise, and 358 of Miles's 31,945 entries are exactly that. Composing
+// both sides is the whole fix.
+const UTF16BE = new TextDecoder("utf-16be");
+function text(view, from, to) {
+  return UTF16BE.decode(new Uint8Array(view.buffer, view.byteOffset + from, to - from))
+                .normalize("NFC");
+}
+
+// One crate's songs, in the order Serato has them. Paths come out as the
+// crate stores them: from the volume root, no leading slash.
+function parseCrate(bytes) {
+  const view = new DataView(bytes.buffer || bytes, bytes.byteOffset || 0, bytes.byteLength);
+  const songs = [];
+  let version = "";
+  eachChunk(view, 0, view.byteLength, (tag, from, to) => {
+    if (tag === "vrsn") version = text(view, from, to);
+    else if (tag === "otrk") {
+      eachChunk(view, from, to, (sub, f, t) => {
+        if (sub === "ptrk") songs.push(text(view, f, t));
+      });
+    }
+  });
+  return { version, songs };
+}
+
+// Serato keeps a crate's place in the tree in its FILENAME, with %% between
+// the levels: "DANCE SUB GENRES%%AMAPIANO%%AMAPIANO.crate" is AMAPIANO,
+// inside AMAPIANO, inside DANCE SUB GENRES. Shown the way Serato shows it.
+function crateName(fileName) {
+  const parts = fileName.replace(/\.crate$/i, "").split("%%");
+  return { parents: parts.slice(0, -1), name: parts[parts.length - 1] || fileName };
+}
+
+// What the browser can actually listen to. AIFF and Apple Lossless decode
+// nowhere in Chrome, and an .mp4 in a crate is a music video, not a song to
+// judge — all of them are reported as "couldn't listen", never guessed at.
+// Measured in Miles's crates: 536 AIFF and 7 mp4 out of 31,945.
+const CAN_HEAR = new Set(["mp3", "wav", "flac", "m4a", "ogg", "opus", "aac"]);
+const CANNOT_HEAR = new Set(["aif", "aiff", "mp4", "m4v", "mov", "alac"]);
+// The ruler asks what KIND of file this is, and it does not speak in file
+// extensions: it judges AAC by AAC's own honest bitrate (192, not 320,
+// because AAC at 256 is transparent), and it decides "does this container
+// claim to be lossless" from the codec name. An .m4a is AAC. Getting this
+// wrong called 363 perfectly good files low, once already.
+const CODECS = { m4a: "aac", aac: "aac", mp4: "aac", mp3: "mp3", flac: "flac",
+                 wav: "wav", aif: "aiff", aiff: "aiff", ogg: "vorbis", opus: "opus" };
+function codecFor(ext) {
+  return CODECS[(ext || "").toLowerCase()] || (ext || "").toLowerCase();
+}
+
+function extensionOf(p) {
+  const dot = p.lastIndexOf(".");
+  return dot < 0 ? "" : p.slice(dot + 1).toLowerCase();
+}
+
+// A crate stores a song's path from the volume root; the browser hands out
+// paths from the folder the DJ picked. The picked folder's own name is the
+// join: pick "DJ Library" and the browser says "DJ Library/90s/x.mp3" while
+// the crate says "Users/me/Dropbox/DJ Library/90s/x.mp3". So the crate path
+// ENDS WITH the browser path, and the longest ending that names a real file
+// is the match — no fuzzy matching, no filename-only guessing, which would
+// happily pair two different edits that share a name.
+//
+// picked maps NFC path-from-the-picked-folder -> whatever the caller wants
+// back (a File, a handle). Returns the same songs, each either found or
+// not, with the crate's own path kept either way so the page can say which
+// ones live outside the folder that was picked.
+//
+// A crate is a snapshot of where songs were the last time Serato wrote it,
+// and a working DJ moves songs. Measured on Miles's crates against his
+// library: 2,118 of 31,945 entries are no longer at their stored path, and
+// 486 of those 651 songs are simply filed somewhere new. So if names is
+// handed in, a song not found at its stored path is looked up by filename —
+// but ONLY when exactly one file in the whole picked folder carries that
+// name. Two files with one name is a guess, and a guess here means judging
+// the wrong recording; nameIndex drops those rather than pick. Measured:
+// all 486 resolve to exactly one file, and only 15 of 10,850 names in his
+// library are shared at all.
+//
+// These are deliberately two different keys and they are never swapped. The
+// path is the strict one and decides on its own; the name is the loose one
+// and only ever gets asked after the strict one has failed.
+function nameIndex(picked) {
+  const seen = new Map(), out = new Map();
+  for (const [rel, file] of picked) {
+    const base = rel.slice(rel.lastIndexOf("/") + 1);
+    seen.set(base, (seen.get(base) || 0) + 1);
+    out.set(base, { rel, file });
+  }
+  for (const [base, n] of seen) if (n > 1) out.delete(base);
+  return out;
+}
+
+function resolve(songs, picked, names = null) {
+  return songs.map((cratePath) => {
+    const seg = cratePath.split("/");
+    for (let k = 0; k < seg.length; k++) {
+      const tail = seg.slice(k).join("/");
+      if (picked.has(tail)) {
+        return { cratePath, relPath: tail, file: picked.get(tail), moved: false };
+      }
+    }
+    const hit = names && names.get(seg[seg.length - 1]);
+    if (hit) return { cratePath, relPath: hit.rel, file: hit.file, moved: true };
+    return { cratePath, relPath: null, file: null, moved: false };
+  });
+}
+// ---- ear.js ------------------------------------------------------
+// The browser ear, as pure functions. No DOM, no fetch, no files — numbers
+// in, numbers out, so the same code runs in the Quality Check page and in the
+// Node calibration harness, and a test can feed it a sine it built itself.
+//
+// A lossy encoder throws away everything above a cutoff. That cutoff is a
+// brick wall in the spectrum and it SURVIVES re-encoding, so a 128 saved as
+// a 320, or as a FLAC, still carries the 128's 16 kHz wall. The wall is the
+// whole tell.
+//
+// The measuring half is a port of the Phase 0 v3 browser ear (proven against
+// the Booth's ffmpeg ladder on 140 real files, r=0.82-0.89 per band); the
+// judging half is a port of the-booth/booth/quality.py's grade(). The seam
+// between them is kept on purpose: bandPowers measures and decides nothing,
+// verdict decides and measures nothing. Every threshold lives on the judging
+// side, which is why a calibration change costs microseconds.
+
+// The six bands, in Hz. Each reading is the power in everything from that
+// frequency up to Nyquist — cumulative, the same shape as the Booth's
+// highpass ladder — so a wall shows up as the band going silent.
+const BANDS = [16000, 17000, 18000, 19000, 20000, 21000];
+
+// FFT size. 32768 samples at 44.1 kHz is about three-quarters of a second
+// per frame, which resolves the top octave finely enough to see a wall.
+const N = 32768;
+
+// One 25-second slice, starting 40 seconds in — past most intros, inside
+// most grooves. Short files measure around their own middle instead; see
+// sliceStart.
+const SLICE_SECONDS = 25;
+const START = 40;
+
+// Every band silent is not a wall — it is a silent passage (a breakdown, a
+// long intro). The CALLER retries once, seven-tenths of the way in; see
+// retryStart. Same number as the Booth's _ALL_SILENT.
+const ALL_SILENT = -89;
+
+// How far below Nyquist a band has to sit before its reading means anything.
+// A 44.1 kHz file gives 22,050 — so 21k is usable and nothing above is.
+// This is not merely a labelling rule: asking a file for a band it cannot
+// physically hold returns garbage, not silence, and read either way it lies.
+const HEADROOM = 1000;
+
+// ---------------------------------------------------------------- the FFT
+
+// In-place iterative radix-2 FFT, ported line for line from the Phase 0
+// ear. Both arrays are modified. The twiddle factors are built by the same
+// running recurrence as the original, on purpose: the recipe is proven as a
+// whole, rounding behaviour included, so nothing here is "improved".
+function fft(re, im) {
+  const n = re.length;
+  for (let i = 1, j = 0; i < n; i++) {
+    let bit = n >> 1;
+    for (; j & bit; bit >>= 1) j ^= bit;
+    j ^= bit;
+    if (i < j) { [re[i], re[j]] = [re[j], re[i]]; [im[i], im[j]] = [im[j], im[i]]; }
+  }
+  for (let len = 2; len <= n; len <<= 1) {
+    const ang = -2 * Math.PI / len, wr = Math.cos(ang), wi = Math.sin(ang);
+    for (let i = 0; i < n; i += len) {
+      let cr = 1, ci = 0;
+      for (let j = 0; j < len / 2; j++) {
+        const a = i + j, b = i + j + len / 2;
+        const tr = re[b] * cr - im[b] * ci, ti = re[b] * ci + im[b] * cr;
+        re[b] = re[a] - tr; im[b] = im[a] - ti; re[a] += tr; im[a] += ti;
+        const ncr = cr * wr - ci * wi; ci = cr * wi + ci * wr; cr = ncr;
+      }
+    }
+  }
+}
+
+// The Blackman-Harris window, built once. Its sidelobes sit 92 dB down,
+// which is what lets a -89 dB silence threshold mean silence rather than
+// leakage from the loud part of the record. WSUM2 goes into the power
+// normalisation so a full-scale sine reads about -3 dBFS regardless of N.
+const W = new Float64Array(N);
+let WSUM2 = 0;
+for (let j = 0; j < N; j++) {
+  const x = j / (N - 1);
+  W[j] = 0.35875 - 0.48829 * Math.cos(2 * Math.PI * x)
+       + 0.14128 * Math.cos(4 * Math.PI * x)
+       - 0.01168 * Math.cos(6 * Math.PI * x);
+  WSUM2 += W[j] * W[j];
+}
+
+// ------------------------------------------------------------ the measure
+
+// Where the 25-second slice starts: 40 seconds in, or centred on the middle
+// of a short file (duration/2 - 12, so the slice straddles the midpoint)
+// once the song is too short to hold 30 seconds past the 40 mark.
+function sliceStart(durationSec) {
+  if (durationSec && durationSec < START + 30) {
+    return Math.max(0, durationSec / 2 - 12);
+  }
+  return START;
+}
+
+// Absolute dB per band from one slice of decoded audio.
+//
+// channels is an array of Float32Array (or plain arrays), one per channel,
+// all the same length — exactly what AudioBuffer.getChannelData hands over.
+// Every channel is analysed and the power summed across channels and frames
+// BEFORE the log: a mono mixdown cancels wide-stereo top end and was
+// measured doing it in Phase 0.
+//
+// durationSec is only consulted when startSec is not given, to apply the
+// short-file rule. Pass startSec explicitly to re-slice (the retry); the
+// retry DECISION lives with the caller — see allSilent and retryStart — so
+// this stays a pure measurement.
+//
+// Returns {hz: dB} with null for any band the file cannot physically hold
+// (closer than HEADROOM to Nyquist), or null when the slice is too short to
+// hold even one FFT frame.
+//
+// bands defaults to the six the room uses. The parameter exists so a test
+// can point the same math at a band low enough to hold a known sine — the
+// page never passes it.
+function bandPowers(channels, sampleRate, durationSec, startSec,
+                           bands = BANDS) {
+  const start = (startSec == null) ? sliceStart(durationSec) : startSec;
+  const length = channels.length ? channels[0].length : 0;
+  const s0 = Math.floor(start * sampleRate);
+  const s1 = Math.min(length, s0 + SLICE_SECONDS * sampleRate);
+  const hop = N >> 1;
+  const sums = new Float64Array(N / 2);
+  let frames = 0;
+  const re = new Float64Array(N), im = new Float64Array(N);
+  for (let c = 0; c < channels.length; c++) {
+    const ch = channels[c];
+    for (let s = s0; s + N <= s1; s += hop) {
+      for (let j = 0; j < N; j++) { re[j] = ch[s + j] * W[j]; im[j] = 0; }
+      fft(re, im);
+      for (let k = 0; k < N / 2; k++) sums[k] += re[k] * re[k] + im[k] * im[k];
+      frames++;
+    }
+  }
+  if (!frames) return null;
+  const norm = 2 / (N * WSUM2 * frames);
+  const out = {};
+  for (const b of bands) {
+    // The Nyquist guard. Above this line the bins hold nothing the file
+    // could say, and a reading would invent either content or a wall.
+    if (b > sampleRate / 2 - HEADROOM) { out[b] = null; continue; }
+    let p = 0;
+    for (let k = Math.round(b * N / sampleRate); k < N / 2; k++) p += sums[k];
+    out[b] = Math.round(10 * Math.log10(p * norm + 1e-14) * 10) / 10;
+  }
+  return out;
+}
+
+// True when the file HAS usable bands and every one of them reads silent.
+// That is a silent passage, not a wall — a real wall has something below
+// it — and it is the one condition that earns a second slice. A file with
+// no usable bands at all is a different thing (too old a recording to
+// judge) and returns false here.
+function allSilent(bands) {
+  if (!bands) return false;
+  const usable = BANDS.filter((b) => bands[b] != null);
+  return usable.length > 0 && usable.every((b) => bands[b] <= ALL_SILENT);
+}
+
+// Where to look again when the first slice was silent: seven-tenths of the
+// way in, which lands past most breakdowns while leaving room to measure.
+// Returns null when the retry point is too close to the first slice or to
+// the end of the file to say anything new — the caller then keeps the
+// silent reading, exactly as the Booth does.
+function retryStart(durationSec, startSec) {
+  const again = (durationSec || 0) * 0.70;
+  if (again > startSec + 10 && (durationSec || 0) - again >= 10) return again;
+  return null;
+}
+
+// -------------------------------------------------------------- the maps
+
+// Per-band linear maps that translate a browser reading onto the Booth
+// ear's scale. These are the CALIBRATED ones — refitted 2026-08-24 against
+// 335 of Miles's files and past the 90% gate at 91.9%; the Phase 0 pair
+// fitted on 140 files scores 76.7% and must not come back. data/maps.json
+// is the copy tools/calibrate.mjs emits; this is the copy the page ships,
+// and they are the same numbers. See docs/2026-08-24-calibration-run.md. The two ears hear the same wall but not the same number: the
+// browser sums FFT bins where the Booth runs a highpass ladder through
+// ffmpeg, and the maps close that gap. [slope, intercept] per band:
+// booth_dB = slope * browser_dB + intercept.
+const DEFAULT_MAPS = {
+  16000: [0.823, 4.4],
+  17000: [0.993, -8.9],
+  18000: [1.01, -12.3],
+  19000: [0.985, -16.1],
+  20000: [1.028, -9.7],
+  21000: [0.942, -13.2],
+};
+
+// Apply the maps to one reading. Unusable (null) bands stay null — a map
+// cannot conjure a reading the file could not give. Values are rounded to
+// one decimal, the same precision the Booth stores its own readings at.
+function mapToBooth(bands, maps = DEFAULT_MAPS) {
+  if (!bands) return null;
+  const out = {};
+  for (const b of BANDS) {
+    const v = bands[b];
+    if (v == null) { out[b] = null; continue; }
+    const [slope, intercept] = maps[b];
+    out[b] = Math.round((slope * v + intercept) * 10) / 10;
+  }
+  return out;
+}
+
+// -------------------------------------------------------------- the ruler
+//
+// A port of booth/quality.py's grade(), judging mapped readings. The
+// numbers below are the Booth's own and mean what they mean THERE — the
+// maps above exist precisely so these thresholds can be shared unchanged.
+
+// Digital silence, on the Booth's scale. Above ffmpeg's floor (silence
+// comes back as -91.0 and as -90.3 and both mean nothing is there), below
+// the quietest real content the Booth has measured (-87.3 at 17k, and that
+// was signal).
+const SILENT = -89;
+
+// An ordinary honest 320 walls at 20k. So a wall at 18k or below is a
+// 128-class file wearing a 320's label, and 19k is somewhere in between.
+// "In between" applies to a lossy file only; inside a lossless container
+// there is no honest wall at all, and verdict() says why.
+const BAD_AT = 18000;
+const SUSPECT_AT = 19000;
+
+// What counts as an honest bitrate depends on the codec, and it has to.
+// AAC at 256 is transparent — about the equal of MP3 320 — and judging AAC
+// by the MP3 yardstick called 363 perfectly good .m4a files low on Miles's
+// library. AAC genuinely worth replacing starts below about 192.
+const HONEST = 320;
+const HONEST_AAC = 192;
+
+// Containers that claim to be lossless. Accepts either a codec name (what
+// ffprobe says: flac, alac, ape, pcm_s16le...) or a bare file extension
+// (what a browser page has: wav, aiff...), lowercased, no dot.
+const LOSSLESS = new Set(["flac", "alac", "ape", "wav", "aif", "aiff"]);
+function isLossless(codec) {
+  const c = (codec || "").toLowerCase();
+  return LOSSLESS.has(c) || c.startsWith("pcm_");
+}
+
+// The bitrate below which this file is genuinely worse than the rest.
+function honestFor(codec) {
+  return (codec || "").toLowerCase() === "aac" ? HONEST_AAC : HONEST;
+}
+
+// The lowest usable band that reads silent, or null. Only usable bands
+// count: a 32 kHz file has none, and reading its empty top end as a wall
+// is how a room starts crying wolf on the oldest records in the library.
+function wall(mappedBands, sampleRate) {
+  for (const hz of usableBands(sampleRate)) {
+    const v = mappedBands ? mappedBands[hz] : null;
+    if (v != null && v <= SILENT) return hz;
+  }
+  return null;
+}
+
+// Which of the six bands this file could physically hold, from its sample
+// rate — the same list spectrum.read computes before it measures anything.
+function usableBands(sampleRate) {
+  const ceiling = sampleRate ? sampleRate / 2 - HEADROOM : 0;
+  return BANDS.filter((hz) => hz <= ceiling);
+}
+
+// A mark and a line of plain English. Never a dB figure.
+//
+// The marks are the room's own three-step: "bad" (worse than it claims),
+// "suspect" (in between), "low" (honest but low), "unknown" (too old a
+// recording to judge), and "" (nothing to say — a fine file). The sentences
+// are the room's sentences, word for word.
+//
+// Adapted from grade() only where the inputs differ: the room reads the
+// file's extension off its path to know a lossless claim; here the codec
+// string carries that (isLossless takes codec names and extensions both).
+// kbps is rounded with Math.round where Python rounds half-to-even — the
+// difference can only ever touch the number IN the sentence, never the
+// mark, because every comparison below uses the unrounded value.
+function verdict(mappedBands, codec, kbps, sampleRate) {
+  const usable = usableBands(sampleRate);
+  if (!usable.length) {
+    return { mark: "unknown", wall: null,
+             says: "Too old a recording to judge — this file has nothing " +
+                   "up top by design." };
+  }
+
+  const lossless = isLossless(codec);
+  const w = wall(mappedBands, sampleRate);
+
+  // A lossless container that goes silent ANYWHERE is lying, even high up.
+  // True lossless never goes fully silent — dither noise runs to the top,
+  // and wrapping a lossy file in FLAC does not move the wall it came with.
+  // So there is no honest reading of a wall in here, and none of the doubt
+  // that makes 19k merely "in between" for an MP3 survives: the only open
+  // question is how good the MP3 underneath was.
+  if (lossless && w != null) {
+    if (w <= BAD_AT) {
+      return { mark: "bad", wall: w,
+               says: "Says lossless — really came off a 128." };
+    }
+    if (w <= SUSPECT_AT) {
+      return { mark: "bad", wall: w,
+               says: "Says lossless — really came off an MP3." };
+    }
+    return { mark: "suspect", wall: w,
+             says: "Says lossless — came off a good MP3." };
+  }
+
+  // A lossy file that already claims a low bitrate is judged "low" before
+  // any wall is read — and this is the one adaptation to the room's order
+  // of checks, made because the two ears differ exactly here. The room's
+  // ffmpeg ladder leaks low end through its highpass at around -80 dB, so
+  // it never sees the wall an honest 128 genuinely has at 15-16k, and its
+  // ruler could safely treat every visible wall as a lie. This ear hears
+  // that wall plainly, and read through the unadapted ruler an honest 128
+  // came back "Says 128 — really a 128" — a file called a liar for telling
+  // the truth. Measured on the 2026-08-23 calibration sample: the room
+  // marks 33 of 36 such files "low", and the three it flags instead are
+  // transcodes hiding inside an already-low container, which this ear
+  // gives up on catching (the room's own ladder catches almost none of
+  // them either — see the calibration doc).
+  //
+  // "Low" only ever means a lossy file: a WAV or AIFF reports a container
+  // bitrate that is just sample rate times depth, and a FLAC reports
+  // whatever it compressed to — neither says anything about quality.
+  if (!lossless && (kbps || 0) > 0 && (kbps || 0) < honestFor(codec)) {
+    return { mark: "low", wall: w,
+             says: "Honest " + Math.round(kbps) + "." };
+  }
+
+  if (w != null && w <= BAD_AT) {
+    return { mark: "bad", wall: w,
+             says: "Says " + Math.round(kbps || 0) + " — really a 128." };
+  }
+
+  if (w != null && w <= SUSPECT_AT) {
+    return { mark: "suspect", wall: w,
+             says: "Says " + Math.round(kbps || 0) +
+                   " — came off something worse." };
+  }
+
+  return { mark: "", wall: w, says: "" };
+}
+// ---- words.js ----------------------------------------------------
+// What the page actually says, as pure functions — so the wording is
+// checkable and cannot drift into jargon unnoticed.
+//
+// House voice, from the Booth: plain words a DJ would say out loud, never a
+// number a DJ would have to interpret. No decibels, no "flagged", no
+// "confidence". Say what it is and what it means for the song.
+
+// Measured in Chrome over 71 of Miles's own songs, header read and decode
+// included: 1.72 s a song. Rounded UP rather than down — a scan that
+// finishes early is a good surprise and one that overruns is a broken
+// promise. The page re-measures as it goes and the countdown uses the real
+// pace; this is only the promise made up front.
+const SECONDS_PER_SONG = 1.8;
+
+function plural(n, one, many) {
+  return n + " " + (n === 1 ? one : many);
+}
+
+// An honest, roundable estimate. Nobody wants "4 minutes 12 seconds".
+function sayTime(seconds) {
+  if (seconds < 45) return "under a minute";
+  if (seconds < 90) return "about a minute";
+  if (seconds < 3600) return "about " + Math.round(seconds / 60) + " minutes";
+  const hours = seconds / 3600;
+  const half = Math.round(hours * 2) / 2;
+  if (half === 1) return "about an hour";
+  return "about " + (Number.isInteger(half) ? half : Math.floor(half) + "½") + " hours";
+}
+
+function estimate(songCount) {
+  return sayTime(songCount * SECONDS_PER_SONG);
+}
+
+// Worst first, and within a mark the deeper wall first — a song whose top
+// end stops at 16k is further gone than one that stops at 18k. A null wall
+// sorts last inside its own group.
+const ORDER = { bad: 0, suspect: 1, low: 2, "": 3, unknown: 4 };
+function rank(mark) {
+  const r = ORDER[mark || ""];
+  return r === undefined ? 3 : r;
+}
+function sortWorstFirst(rows) {
+  return rows.slice().sort((a, b) => {
+    const d = rank(a.mark) - rank(b.mark);
+    if (d) return d;
+    const aw = a.wall == null ? Infinity : a.wall;
+    const bw = b.wall == null ? Infinity : b.wall;
+    return aw - bw;
+  });
+}
+
+// The badge beside a song. Only the two marks a DJ should act on get one;
+// an honest song is not decorated, and "low" is stated rather than warned
+// about, because a file that says 192 and IS 192 has done nothing wrong.
+function label(mark) {
+  if (mark === "bad") return { tone: "bad", text: "Not what it says" };
+  if (mark === "suspect") return { tone: "watch", text: "Worth an ear" };
+  if (mark === "low") return { tone: null, text: "Honest, just low" };
+  if (mark === "unknown") return { tone: null, text: "Too old to judge" };
+  return null;
+}
+
+// The line at the top of the results. Counts in, one sentence out. The
+// all-clear has to sound like an all-clear — if there is nothing to do, the
+// page says so and gets out of the way rather than inventing work.
+function headline({ bad = 0, suspect = 0, low = 0, fine = 0, unknown = 0,
+                           unheard = 0 }) {
+  // A recording too old to have anything up top was listened to but not
+  // judged, so it must not be counted into "all N sound like what they
+  // say" — that would be claiming something nobody checked. It gets its
+  // own line on the page instead.
+  const judged = bad + suspect + low + fine;
+  if (!judged && unknown) {
+    return "These are all too old to judge — there is nothing up top to listen for.";
+  }
+  if (!judged && unheard) {
+    return "I couldn't listen to any of these — " + reasonForUnheard(unheard) + ".";
+  }
+  if (!judged) return "Nothing to listen to in there.";
+  if (!bad && !suspect) {
+    return "Nothing dodgy in there. All " + plural(judged, "song", "songs") +
+           " sound like what they say.";
+  }
+  const parts = [];
+  if (bad) parts.push(plural(bad, "song isn't", "songs aren't") + " what " +
+                      (bad === 1 ? "it says it is" : "they say they are"));
+  // "2 more are worth an ear" only reads right when something came before
+  // it. On its own it has to be "2 songs are worth an ear".
+  if (suspect) {
+    parts.push(bad ? plural(suspect, "more is", "more are") + " worth an ear"
+                   : plural(suspect, "song is", "songs are") + " worth an ear");
+  }
+  return capitalise(parts.join(", and ")) + ".";
+}
+
+function reasonForUnheard(n) {
+  return n === 1 ? "the browser can't open that kind of file"
+                 : "the browser can't open those kinds of file";
+}
+
+function capitalise(s) {
+  return s.charAt(0).toUpperCase() + s.slice(1);
+}
+
+// The line under the progress bar. Deliberately counts DOWN and names what
+// is left, because a DJ watching this wants to know when they can leave.
+function progressLine(done, total, secondsLeft) {
+  if (done >= total) return "Finishing up…";
+  return done + " of " + total + " listened to — " + sayTime(secondsLeft) + " left";
+}
+// ---- app.js ------------------------------------------------------
+// The page itself: picking a folder, finding the crates, listening, and
+// showing what it heard. Every decision worth arguing about lives in
+// rate.js, crates.js, ear.js or words.js, each with its own runnable check.
+// What is left here is glue — the browser bits that can only be judged by
+// opening the page.
+
+const $ = (id) => document.getElementById(id);
+const el = (tag, cls, text) => {
+  const n = document.createElement(tag);
+  if (cls) n.className = cls;
+  if (text != null) n.textContent = text;
+  return n;
+};
+
+function show(id) {
+  for (const s of document.querySelectorAll(".screen")) s.hidden = s.id !== id;
+  // Send focus to the new screen's heading, or a keyboard user is left
+  // where the old screen used to be.
+  const h = document.querySelector("#" + id + " h1");
+  if (h) { h.tabIndex = -1; h.focus(); }
+}
+
+// ------------------------------------------------------------- the folder
+
+// Two ways in. Chrome and Edge have a real folder picker; everything else
+// falls back to the file input, which asks the same question with an
+// uglier dialog. Both hand back the same thing: a map of path-from-the-
+// picked-folder to something we can get a File out of, composed to NFC so
+// it lines up with what the crates say.
+const hasPicker = typeof window.showDirectoryPicker === "function";
+
+async function walkHandle(dir, prefix, out) {
+  for await (const [name, handle] of dir.entries()) {
+    if (name.startsWith(".")) continue;      // ._AppleDouble files are not songs
+    const p = prefix ? prefix + "/" + name : name;
+    if (handle.kind === "directory") await walkHandle(handle, p, out);
+    else out.set(p.normalize("NFC"), handle);
+  }
+}
+
+async function pickFolder() {
+  if (hasPicker) {
+    const root = await window.showDirectoryPicker({ mode: "read" });
+    const files = new Map();
+    await walkHandle(root, root.name, files);
+    return { name: root.name, files };
+  }
+  return new Promise((resolve, reject) => {
+    const input = el("input");
+    input.type = "file";
+    input.webkitdirectory = true;
+    input.multiple = true;
+    input.addEventListener("change", () => {
+      if (!input.files.length) return reject(new Error("nothing picked"));
+      const files = new Map();
+      for (const f of input.files) {
+        if (f.name.startsWith(".")) continue;
+        files.set(f.webkitRelativePath.normalize("NFC"), f);
+      }
+      resolve({ name: input.files[0].webkitRelativePath.split("/")[0], files });
+    });
+    input.click();
+  });
+}
+
+const asFile = (entry) => (entry && entry.getFile ? entry.getFile() : Promise.resolve(entry));
+
+// ------------------------------------------------------------- the crates
+
+const CRATE_PATH = /(^|\/)_Serato_\/Subcrates\/.+\.crate$/i;
+const crateFilesIn = (files) => [...files.keys()].filter((p) => CRATE_PATH.test(p)).sort();
+
+// -------------------------------------------------------------- the state
+
+const state = {
+  music: null,        // { name, files }
+  picked: null,       // Map rel -> entry, the songs
+  names: null,        // the loose index, built once
+  crates: [],         // [{ label, songs: [resolved] }]
+  stop: false,
+};
+
+// -------------------------------------------------------------- listening
+
+// One AudioContext per sample rate, kept because building one is not free.
+// The context is built AT the file's own rate so nothing is resampled —
+// see the note at the top of rate.js for why that matters.
+const contexts = new Map();
+function contextFor(rate) {
+  if (!contexts.has(rate)) {
+    try { contexts.set(rate, new OfflineAudioContext(1, 1, rate)); }
+    catch { contexts.set(rate, null); }
+  }
+  return contexts.get(rate);
+}
+
+// ponytail: decodes the whole song to reach 25 seconds of it. Simple, and
+// one song is in memory at a time; if a 60-minute lossless file ever turns
+// up, decode a slice instead.
+async function listenTo(entry, relPath) {
+  const ext = extensionOf(relPath);
+  if (!CAN_HEAR.has(ext)) return { unheard: "kind" };
+
+  const file = await asFile(entry);
+  if (!file || !file.size) return { unheard: "empty" };
+
+  const head = new Uint8Array(await file.slice(0, 16).arrayBuffer());
+  const tag = bytesNeeded(head) - 65536;
+  let rate = sampleRateOf(new Uint8Array(
+    await file.slice(0, Math.min(file.size, bytesNeeded(head))).arrayBuffer()));
+  if (rate == null) {
+    // An .m4a often parks its header at the end of the file.
+    const n = Math.min(file.size, 1048576);
+    rate = scanForMdhd(new Uint8Array(await file.slice(file.size - n).arrayBuffer()));
+  }
+  if (!rate) return { unheard: "rate" };
+
+  const ctx = contextFor(rate);
+  if (!ctx) return { unheard: "rate" };
+
+  let buf;
+  try { buf = await ctx.decodeAudioData(await file.arrayBuffer()); }
+  catch { return { unheard: "decode" }; }
+
+  const channels = [];
+  for (let c = 0; c < buf.numberOfChannels; c++) channels.push(buf.getChannelData(c));
+
+  let bands = bandPowers(channels, rate, buf.duration);
+  if (allSilent(bands)) {
+    const again = retryStart(buf.duration, sliceStart(buf.duration));
+    if (again != null) bands = bandPowers(channels, rate, buf.duration, again) || bands;
+  }
+
+  // The bitrate the file claims. The ID3 artwork in front of the audio is
+  // not music and would flatter a small file into looking healthier.
+  const kbps = buf.duration ? ((file.size - Math.max(0, tag)) * 8) / buf.duration / 1000 : 0;
+  const v = verdict(mapToBooth(bands), codecFor(ext), kbps, rate);
+  buf = null;
+  return { mark: v.mark, wall: v.wall, says: v.says };
+}
+
+// ---------------------------------------------------------------- drawing
+
+function songName(relPath) {
+  return relPath.slice(relPath.lastIndexOf("/") + 1);
+}
+
+function resultRow(row) {
+  const box = el("div", "result");
+  const badge = label(row.mark);
+  const line = el("div", "song");
+  line.append(songName(row.relPath));
+  if (badge && badge.tone) {
+    line.append(" ");
+    line.append(el("span", "tag " + badge.tone, badge.text));
+  }
+  box.append(line);
+  const detail = badge && !badge.tone ? badge.text + " — " + row.says
+               : badge ? row.says : "Sounds like what it says.";
+  box.append(el("div", "verdict quiet", detail));
+  if (row.moved) box.append(el("div", "quiet", "Filed somewhere new since this crate was made."));
+  return box;
+}
+
+const UNHEARD_WHY = {
+  kind: "this browser can't open that kind of file",
+  decode: "this browser couldn't open it",
+  rate: "I couldn't tell what it was recorded at",
+  empty: "the file is empty",
+};
+
+// ------------------------------------------------------------- the screens
+
+function drawCrates() {
+  const list = $("crate-list");
+  list.textContent = "";
+  for (const crate of state.crates) {
+    const found = crate.songs.filter((s) => s.file && CAN_HEAR.has(extensionOf(s.relPath)));
+    const li = el("li");
+    const b = el("button", "crate");
+    b.type = "button";
+    const name = el("span", "name");
+    name.append(crate.name);
+    if (crate.parents.length) name.append(el("span", "where", crate.parents.join(" › ")));
+    b.append(name);
+    b.append(el("span", "count",
+      found.length ? plural(found.length, "song", "songs") + " · " + estimate(found.length)
+                   : "nothing to listen to"));
+    b.disabled = !found.length;
+    b.addEventListener("click", () => run(found, crate.name));
+    li.append(b);
+    list.append(li);
+  }
+  const all = new Map();
+  for (const crate of state.crates) {
+    for (const s of crate.songs) {
+      if (s.file && CAN_HEAR.has(extensionOf(s.relPath))) all.set(s.relPath, s);
+    }
+  }
+  const everything = [...all.values()];
+  const btn = $("check-all");
+  btn.textContent = "Check every song in every crate — " +
+    plural(everything.length, "song", "songs") + ", " + estimate(everything.length);
+  btn.onclick = () => run(everything, "every crate");
+  // With one crate, "or the lot" offers the same button a second time.
+  $("all-wrap").hidden = state.crates.length < 2;
+  $("crate-list-wrap").hidden = false;
+}
+
+function useWholeFolder() {
+  const songs = [...state.picked.entries()]
+    .filter(([rel]) => CAN_HEAR.has(extensionOf(rel)))
+    .map(([relPath, file]) => ({ relPath, file, cratePath: relPath, moved: false }));
+  $("no-serato").hidden = true;
+  $("found-line").textContent =
+    plural(songs.length, "song", "songs") + " in that folder I can listen to.";
+  const wrap = $("crate-list-wrap");
+  wrap.hidden = false;
+  $("crate-list").textContent = "";
+  const btn = $("check-all");
+  $("all-wrap").hidden = false;
+  btn.textContent = "Check all of them — " + estimate(songs.length);
+  btn.onclick = () => run(songs, state.music.name);
+  document.querySelector("#crate-list-wrap h2").textContent = "Everything in that folder";
+}
+
+// --------------------------------------------------------------- the scan
+
+async function run(songs, what) {
+  state.stop = false;
+  show("listening");
+  $("listening-title").textContent = "Listening to " + what + "…";
+  $("live-results").textContent = "";
+  $("bar-fill").style.width = "0%";
+
+  const heard = [], unheard = [];
+  let done = 0, spent = 0;
+
+  for (const song of songs) {
+    if (state.stop) break;
+    const began = performance.now();
+    let out;
+    try { out = await listenTo(song.file, song.relPath); }
+    catch { out = { unheard: "decode" }; }
+    spent += (performance.now() - began) / 1000;
+    done++;
+
+    if (out.unheard) unheard.push({ ...song, why: out.unheard });
+    else {
+      const row = { ...song, ...out };
+      heard.push(row);
+      if (row.mark === "bad" || row.mark === "suspect") $("live-results").prepend(resultRow(row));
+    }
+
+    const pace = spent / done;
+    $("bar-fill").style.width = (100 * done / songs.length).toFixed(1) + "%";
+    $("progress").textContent = progressLine(done, songs.length, (songs.length - done) * pace);
+    await new Promise((r) => setTimeout(r, 0));   // let the page breathe
+  }
+
+  finish(heard, unheard, songs.length, done, what);
+}
+
+function finish(heard, unheard, asked, done, what) {
+  const counts = { bad: 0, suspect: 0, low: 0, fine: 0, unknown: 0,
+                   unheard: unheard.length };
+  for (const r of heard) counts[r.mark || "fine"]++;
+
+  show("done");
+  $("done-title").textContent = done < asked ? "Stopped" : "Done";
+  $("done-line").textContent = headline(counts);
+
+  const box = $("results");
+  box.textContent = "";
+  const worth = sortWorstFirst(heard).filter((r) => r.mark === "bad" || r.mark === "suspect");
+  if (worth.length) for (const r of worth) box.append(resultRow(r));
+  else box.append(el("p", "clear", "Nothing in this one needs replacing."));
+
+  const low = heard.filter((r) => r.mark === "low");
+  if (low.length) {
+    const d = el("details");
+    d.append(el("summary", null,
+      plural(low.length, "song is", "songs are") + " honest, just low"));
+    for (const r of low) d.append(resultRow(r));
+    box.append(d);
+  }
+
+  // Listened to, but nothing up there to listen for — an old recording, or
+  // one mastered at a low sample rate. Silence would be a lie by omission:
+  // the DJ would count it among the songs that came back clean.
+  const old = heard.filter((r) => r.mark === "unknown");
+  if (old.length) {
+    const d = el("details");
+    d.append(el("summary", null,
+      plural(old.length, "song is", "songs are") + " too old to judge"));
+    d.append(el("p", "quiet",
+      "These were recorded with nothing up at the top end to begin with, so there is " +
+      "no way to tell a good copy from a bad one by listening up there."));
+    for (const r of old) d.append(resultRow(r));
+    box.append(d);
+  }
+
+  $("unheard-wrap").hidden = !unheard.length;
+  if (unheard.length) {
+    $("unheard-summary").textContent =
+      "I couldn't listen to " + plural(unheard.length, "song", "songs");
+    const u = $("unheard");
+    u.textContent = "";
+    for (const r of unheard) {
+      u.append(el("p", "miss", songName(r.relPath) + " — " + (UNHEARD_WHY[r.why] || "couldn't open it")));
+    }
+  }
+
+  const lost = (state.lost || []).length;
+  $("missing-wrap").hidden = !lost;
+  if (lost) {
+    $("missing-summary").textContent =
+      plural(lost, "song in your crates isn't", "songs in your crates aren't") + " on this computer";
+    const m = $("missing");
+    m.textContent = "";
+    for (const p of state.lost.slice(0, 200)) m.append(el("p", "miss", songName(p)));
+    if (lost > 200) m.append(el("p", "miss", "…and " + (lost - 200) + " more."));
+  }
+
+  // The summary goes to the clipboard rather than into a mailto. Two
+  // reasons: this page is public, and an address written into a public page
+  // is an address in every scraper's list within a week; and a mailto opens
+  // a mail app plenty of people have never set up. Copying works everywhere
+  // and lets a DJ send it however they already talk to Miles.
+  state.summary = [
+    "Quality Check beta — " + what,
+    "Listened to: " + heard.length + " songs",
+    "Not what they say: " + counts.bad,
+    "Worth an ear: " + counts.suspect,
+    "Honest but low: " + counts.low,
+    "Too old to judge: " + counts.unknown,
+    "Couldn't listen: " + unheard.length,
+    "",
+    "Songs it called out:",
+    ...worth.map((r) => "  " + songName(r.relPath) + " — " + r.says),
+    "",
+    "What looked wrong to me:",
+    "",
+  ].join("\n");
+}
+
+$("copy").addEventListener("click", async () => {
+  const said = $("copied");
+  try {
+    await navigator.clipboard.writeText(state.summary || "");
+    said.textContent = "Copied. Paste it into a message to me.";
+  } catch {
+    // Clipboard blocked (an older browser, or the page opened straight off
+    // the disk). Put it on screen so it can still be selected by hand.
+    said.textContent = "Couldn't copy it — here it is to select:";
+    const box = el("textarea");
+    box.value = state.summary || "";
+    box.rows = 12;
+    box.style.cssText = "width:100%;margin-top:0.75rem;font:inherit;padding:0.75rem;" +
+      "border-radius:var(--radius);border:1px solid var(--line);background:var(--surface);color:var(--ink)";
+    said.after(box);
+    box.select();
+  }
+});
+
+// ----------------------------------------------------------------- wiring
+
+async function afterPick(music) {
+  state.music = music;
+  state.picked = music.files;
+  state.names = nameIndex(music.files);
+  show("choose");
+  $("found-line").textContent =
+    plural(music.files.size, "file", "files") + " in " + music.name + ".";
+  await useCrates(crateFilesIn(music.files), music.files);
+}
+
+async function useCrates(crateKeys, from) {
+  if (!crateKeys.length) {
+    $("no-serato").hidden = false;
+    $("crate-list-wrap").hidden = true;
+    return;
+  }
+  $("no-serato").hidden = true;
+  const lost = new Set();
+  state.crates = [];
+  for (const key of crateKeys) {
+    const file = await asFile(from.get(key));
+    const bytes = new Uint8Array(await file.arrayBuffer());
+    const { songs } = parseCrate(bytes);
+    const resolved = resolve(songs, state.picked, state.names);
+    for (const s of resolved) if (!s.file) lost.add(s.cratePath);
+    const nm = crateName(key.slice(key.lastIndexOf("/") + 1));
+    state.crates.push({ ...nm, songs: resolved });
+  }
+  state.lost = [...lost];
+  $("found-line").textContent =
+    plural(state.crates.length, "crate", "crates") + " found in " + state.music.name + ".";
+  drawCrates();
+}
+
+$("pick").addEventListener("click", async () => {
+  note("");
+  try { await afterPick(await pickFolder()); }
+  catch (e) { fell(e, "I couldn't read that folder."); }
+});
+
+// Beta testers hit things we have not seen. Say something plain on screen,
+// and put the real error in the console so it can be asked for.
+function fell(e, plain) {
+  if (e && e.name === "AbortError") return;
+  console.error(e);
+  note(plain + " If you can, open the browser console and send me what it says.");
+}
+
+$("pick-serato").addEventListener("click", async () => {
+  try {
+    const serato = await pickFolder();
+    const keys = [...serato.files.keys()].filter((p) => /\.crate$/i.test(p)).sort();
+    if (!keys.length) return note("No crates in there. Look for the folder called _Serato_.");
+    await useCrates(keys, serato.files);
+  } catch (e) { fell(e, "I couldn't read that folder."); }
+});
+
+$("skip-serato").addEventListener("click", useWholeFolder);
+$("repick").addEventListener("click", () => { note(""); show("start"); });
+$("stop").addEventListener("click", () => { state.stop = true; });
+$("again").addEventListener("click", () => show("choose"));
+
+// One place for anything that went wrong, at the top of the page where it
+// is visible whichever screen is showing — a message pinned to the screen
+// you just left is a message nobody reads. role="alert" so a screen reader
+// says it without being asked.
+function note(text) {
+  const p = $("note");
+  p.textContent = text;
+  p.hidden = !text;
+}
+
+if (!hasPicker) {
+  note(navigator.userAgent.includes("Safari") && !navigator.userAgent.includes("Chrome")
+    ? "Safari can't hand a whole folder to a page. This works in Chrome — the button below will still let you choose a folder, but Chrome is the smoother ride."
+    : "This browser has no folder picker, so you'll get the older file dialog. Chrome or Edge is smoother.");
+}
+
+show("start");
+</script>
+</body>
+</html>
