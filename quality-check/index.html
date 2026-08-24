@@ -784,6 +784,27 @@ function isLossless(codec) {
 }
 
 // The bitrate below which this file is genuinely worse than the rest.
+// A browser has no bitrate field to read, so the page works one out from
+// the file's size and its length. That estimate is good — measured against
+// ffprobe on Miles's own files it lands within a stride of the truth — but
+// it lands a hair UNDER a true 320 (320.0 against ffprobe's 320.7), and the
+// ruler's honest-bitrate test is a strict "less than". Eight genuine 320s
+// in one crate came back "honest, just low" because of that hair.
+//
+// So an estimate that is within 2% of a bitrate anyone actually encodes at
+// is snapped to it. The estimate is the approximate thing here, not the
+// ruler, which is why this rounds the input rather than loosening the test.
+// 2% is far tighter than the gap between neighbouring rates (256 to 320 is
+// 25%), so nothing is ever snapped past its real neighbour.
+const COMMON_KBPS = [64, 96, 112, 128, 160, 192, 224, 256, 320];
+function snapBitrate(kbps) {
+  if (!kbps || kbps <= 0) return kbps;
+  for (const rate of COMMON_KBPS) {
+    if (Math.abs(kbps - rate) <= rate * 0.02) return rate;
+  }
+  return kbps;
+}
+
 function honestFor(codec) {
   return (codec || "").toLowerCase() === "aac" ? HONEST_AAC : HONEST;
 }
@@ -1149,7 +1170,8 @@ async function listenTo(entry, relPath) {
 
   // The bitrate the file claims. The ID3 artwork in front of the audio is
   // not music and would flatter a small file into looking healthier.
-  const kbps = buf.duration ? ((file.size - Math.max(0, tag)) * 8) / buf.duration / 1000 : 0;
+  const kbps = snapBitrate(
+    buf.duration ? ((file.size - Math.max(0, tag)) * 8) / buf.duration / 1000 : 0);
   const v = verdict(mapToBooth(bands), codecFor(ext), kbps, rate);
   buf = null;
   return { mark: v.mark, wall: v.wall, says: v.says };
