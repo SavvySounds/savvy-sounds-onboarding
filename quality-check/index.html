@@ -136,6 +136,38 @@ summary {
   color: var(--ink); font-weight: 700; font-size: var(--label);
   text-transform: uppercase; letter-spacing: 0.12em;
 }
+.donow {
+  display: flex; align-items: center; gap: 0.75rem 1rem; flex-wrap: wrap;
+  margin-top: 0.6rem;
+}
+button.small { min-height: 32px; padding: 0.4rem 0.8rem; font-size: 0.66rem; }
+.topend { display: inline-flex; align-items: center; gap: 3px; }
+.topend .seg {
+  width: 9px; height: 13px; border: 1px solid var(--line); background: transparent;
+}
+.topend .seg.on { background: var(--ink); border-color: var(--ink); }
+.topend .quiet { margin-left: 0.4rem; }
+.shops a.shop {
+  color: var(--ink); text-decoration: underline; text-underline-offset: 3px;
+  text-decoration-thickness: 1px;
+}
+.shops a.shop:hover { text-decoration-thickness: 2px; }
+/* On a phone these are fingers, not a mouse. The compact desktop sizes are
+   fine for a pointer and far too small for a thumb, so the whole strip grows
+   to a real target where the input is coarse or the screen is narrow. */
+@media (pointer: coarse), (max-width: 640px) {
+  .donow { gap: 0.9rem 1.1rem; }
+  button.small { min-height: var(--tap); padding: 0.7rem 1.1rem; }
+  .shops { display: flex; flex-wrap: wrap; align-items: center; gap: 0 0.5rem; }
+  /* The label takes its own line so the three shops sit together and no
+     separator is left stranded at the end of a wrapped line. */
+  .shops > .quiet:first-child { flex: 0 0 100%; }
+  .shops > .quiet:not(:first-child) { display: none; }
+  .shops a.shop {
+    display: inline-flex; align-items: center; min-height: var(--tap);
+    padding: 0 0.35rem;
+  }
+}
 .miss { color: var(--ink-quiet); font-size: 0.85rem; margin: 0.2rem 0; overflow-wrap: anywhere; }
 .row { display: flex; gap: 0.75rem; flex-wrap: wrap; align-items: center; }
 .note {
@@ -159,7 +191,8 @@ summary {
   <div class="promise">
     <ul>
       <li>It reads your files. It never changes, moves or deletes anything.</li>
-      <li>Nothing leaves this computer. No upload, no account, no internet.</li>
+      <li>Nothing uploads. No account. Nothing leaves this computer unless you
+          choose to open a shop link at the end.</li>
       <li>If it finds your Serato crates, it checks the songs you actually play first.</li>
     </ul>
   </div>
@@ -220,7 +253,11 @@ summary {
     <div id="missing"></div>
   </details>
   <div class="row" style="margin-top:2rem">
-    <button id="again" class="primary">Check another crate</button>
+    <button id="copy-list" class="primary" hidden>Copy the list to replace</button>
+    <span id="copied-list" class="quiet" role="status"></span>
+  </div>
+  <div class="row" style="margin-top:1rem">
+    <button id="again" class="secondary">Check another crate</button>
   </div>
 
   <h2>Anything odd?</h2>
@@ -822,6 +859,20 @@ function wall(mappedBands, sampleRate) {
 
 // Which of the six bands this file could physically hold, from its sample
 // rate — the same list spectrum.read computes before it measures anything.
+// The picture that carries the proof, because the ears cannot: one segment
+// per band this file could physically hold, lit where the song still has
+// something and dark from the wall upwards. Measured on the same song
+// encoded twice, the whole 320-vs-128 difference sits above 16 kHz — past
+// most adult hearing — so a DJ has to SEE where the top end stops rather
+// than listen for it. Returns the segments low to high; the caller draws
+// them and never prints a frequency.
+function topEndBars(mappedBands, sampleRate) {
+  return usableBands(sampleRate).map((hz) => ({
+    hz,
+    lit: !!mappedBands && mappedBands[hz] != null && mappedBands[hz] > SILENT,
+  }));
+}
+
 function usableBands(sampleRate) {
   const ceiling = sampleRate ? sampleRate / 2 - HEADROOM : 0;
   return BANDS.filter((hz) => hz <= ceiling);
@@ -1028,6 +1079,61 @@ function capitalise(s) {
   return s.charAt(0).toUpperCase() + s.slice(1);
 }
 
+// ------------------------------------------------- going and getting one
+
+// What to type into a shop's search box, pulled out of a filename. Miles's
+// library names songs several ways and other DJs will have their own, so
+// this does NOT try to work out which half is the artist and which is the
+// title — a search box does not care, and guessing wrong is worse than not
+// guessing. It strips the things that are about HIS filing rather than
+// about the record: the key, the BPM, a leading track number, the label in
+// square brackets, and the edit tags a shop has never heard of.
+const JUNK = /\b(clean|dirty|intro|acap(?:ella)?\s*out|acap\s*in|short\s*edit|qh|quick\s*hit|bpm\s*\d+|\d+\s*bpm)\b/gi;
+
+function searchTerms(filename) {
+  let s = String(filename || "").replace(/\.[a-z0-9]{2,4}$/i, "");
+  s = s.replace(/^\s*\d{1,2}[AB]\s*-\s*/i, "");     // the key: "6A - "
+  s = s.replace(/^\s*\d{2,3}(?:\.\d+)?\s*-\s*/, "");  // the BPM: "113 - "
+  // A leading track number, but only when something recognisable is left.
+  // Plenty of records genuinely start with a number — 99 Problems, 7 Rings,
+  // 1 Thing — so "10 1 Thing" must lose the 10 and keep the 1, and a bare
+  // "1 Thing" must lose nothing. Two words left over is the test.
+  const numbered = s.match(/^\s*\d{1,2}\s+(\S.*)$/);
+  if (numbered && numbered[1].trim().split(/\s+/).length >= 2) s = numbered[1];
+  s = s.replace(/\[[^\]]*\]/g, " ");                 // the label: "[Kitsuné]"
+  s = s.replace(JUNK, " ");
+  s = s.replace(/[_'"`]/g, " ");
+  s = s.replace(/\s*-\s*/g, " ");                    // artist-title dashes
+  s = s.replace(/\(\s*\)/g, " ");                     // brackets left empty
+  return s.replace(/\s+/g, " ").trim();
+}
+
+// Three shops, and only three. Beatport for dance, DJcity for the pool
+// records that make up most of what comes back fake, Bandcamp for the
+// lossless indie end. BPM Supreme was dropped after its search URL was
+// checked and found to redirect to a marketing page — a dead shop link is
+// worse than one shop fewer.
+const SHOPS = [
+  { name: "Beatport", url: "https://www.beatport.com/search?q=" },
+  { name: "DJcity", url: "https://www.djcity.com/search?q=" },
+  { name: "Bandcamp", url: "https://bandcamp.com/search?q=" },
+];
+
+function shops(filename) {
+  const terms = searchTerms(filename);
+  if (!terms) return [];
+  return SHOPS.map((s) => ({ name: s.name, href: s.url + encodeURIComponent(terms) }));
+}
+
+// The DJ's own worklist, not a report for Miles: the songs worth replacing,
+// one per line, with his filing stripped off so it can be pasted straight
+// into a shop's search box.
+function worklist(rows) {
+  const lines = rows.map((r) => searchTerms(r.name)).filter(Boolean);
+  if (!lines.length) return "";
+  return ["Songs to replace:", ...lines.map((l) => "  " + l)].join("\n");
+}
+
 // The line under the progress bar. Deliberately counts DOWN and names what
 // is left, because a DJ watching this wants to know when they can leave.
 function progressLine(done, total, secondsLeft) {
@@ -1172,9 +1278,11 @@ async function listenTo(entry, relPath) {
   // not music and would flatter a small file into looking healthier.
   const kbps = snapBitrate(
     buf.duration ? ((file.size - Math.max(0, tag)) * 8) / buf.duration / 1000 : 0);
-  const v = verdict(mapToBooth(bands), codecFor(ext), kbps, rate);
+  const mapped = mapToBooth(bands);
+  const v = verdict(mapped, codecFor(ext), kbps, rate);
+  const duration = buf.duration;
   buf = null;
-  return { mark: v.mark, wall: v.wall, says: v.says };
+  return { mark: v.mark, wall: v.wall, says: v.says, mapped, rate, duration };
 }
 
 // ---------------------------------------------------------------- drawing
@@ -1199,7 +1307,98 @@ function resultRow(row) {
   box.append(el("div", "verdict quiet",
     badge ? detail(row.mark, row.says) : "Sounds like what it says."));
   if (row.moved) box.append(el("div", "quiet", "Filed somewhere new since this crate was made."));
+  if (badge && badge.tone) box.append(whatNow(row));
   return box;
+}
+
+// Everything a DJ can do about one song. Only the two marks worth acting on
+// get it — an honest file needs no shopping trip.
+function whatNow(row) {
+  const strip = el("div", "donow");
+
+  const play = el("button", "secondary small");
+  play.type = "button";
+  play.textContent = "Hear it";
+  play.addEventListener("click", () => hear(row, play));
+  strip.append(play);
+
+  strip.append(topEndPicture(row));
+
+  // Kept deliberately quiet rather than shouting "Replace it". The Booth
+  // learned that 322 of 350 flagged songs had nothing to replace them with,
+  // and a deck that shouts at every one sends a DJ shopping for records
+  // that were never sold.
+  const links = shops(songName(row.relPath));
+  if (links.length) {
+    const wrap = el("span", "shops");
+    wrap.append(el("span", "quiet", "Find a clean copy: "));
+    links.forEach((s, i) => {
+      if (i) wrap.append(el("span", "quiet", " · "));
+      const a = el("a", "shop", s.name);
+      a.href = s.href;
+      a.target = "_blank";
+      a.rel = "noopener noreferrer";
+      wrap.append(a);
+    });
+    strip.append(wrap);
+  }
+  return strip;
+}
+
+// Where this song's top end stops. No frequency is ever printed — the
+// segments are the whole message, and the words beside them say it plainly.
+function topEndPicture(row) {
+  const bars = topEndBars(row.mapped, row.rate);
+  if (!bars.length) return el("span");
+  const wrap = el("span", "topend");
+  wrap.title = "Where this song's top end stops";
+  for (const b of bars) wrap.append(el("span", "seg" + (b.lit ? " on" : "")));
+  const dark = bars.filter((b) => !b.lit).length;
+  wrap.append(el("span", "quiet", dark ? " top end stops short" : " top end intact"));
+  wrap.setAttribute("role", "img");
+  wrap.setAttribute("aria-label", dark
+    ? "Top end stops short: " + (bars.length - dark) + " of " + bars.length + " steps still there"
+    : "Top end intact");
+  return wrap;
+}
+
+// One song at a time, from the same stretch the tool listened to. This is
+// for recognising and judging the record, NOT for hearing the damage —
+// measured, the whole difference sits above 16 kHz, which is past most
+// adult hearing. The button says as much.
+let playing = null;
+async function hear(row, button) {
+  if (playing && playing.button === button) return stopHearing();
+  stopHearing();
+  try {
+    const file = await asFile(row.file);
+    const url = URL.createObjectURL(file);
+    const audio = new Audio(url);
+    // Seek only once the file has told us how long it is. Setting
+    // currentTime before then is quietly ignored by some browsers, which
+    // would start the song at its intro rather than at the stretch the tool
+    // actually judged.
+    const from = sliceStart(row.duration);
+    if (audio.readyState >= 1) audio.currentTime = from;
+    else audio.addEventListener("loadedmetadata", () => { audio.currentTime = from; }, { once: true });
+    playing = { audio, url, button };
+    audio.addEventListener("ended", stopHearing);
+    await audio.play();
+    button.textContent = "Stop";
+    button.setAttribute("aria-pressed", "true");
+  } catch (e) {
+    stopHearing();
+    fell(e, "I couldn't play that one.");
+  }
+}
+
+function stopHearing() {
+  if (!playing) return;
+  playing.audio.pause();
+  URL.revokeObjectURL(playing.url);
+  playing.button.textContent = "Hear it";
+  playing.button.setAttribute("aria-pressed", "false");
+  playing = null;
 }
 
 const UNHEARD_WHY = {
@@ -1367,6 +1566,8 @@ function finish(heard, unheard, asked, done, what) {
   // is an address in every scraper's list within a week; and a mailto opens
   // a mail app plenty of people have never set up. Copying works everywhere
   // and lets a DJ send it however they already talk to Miles.
+  // The DJ's own worklist first — this is theirs, not a report for Miles.
+  state.worklist = worklist(worth.map((r) => ({ name: songName(r.relPath) })));
   state.summary = [
     "Quality Check beta — " + what,
     "Listened to: " + heard.length + " songs",
@@ -1382,26 +1583,31 @@ function finish(heard, unheard, asked, done, what) {
     "What looked wrong to me:",
     "",
   ].join("\n");
+  $("copy-list").hidden = !state.worklist;
 }
 
-$("copy").addEventListener("click", async () => {
-  const said = $("copied");
+$("copy-list").addEventListener("click", () => copyOut(state.worklist, $("copied-list"),
+  "Copied. Paste it into a shop's search."));
+$("copy").addEventListener("click", () => copyOut(state.summary, $("copied"),
+  "Copied. Paste it into a message to me."));
+
+async function copyOut(text, said, done) {
   try {
-    await navigator.clipboard.writeText(state.summary || "");
-    said.textContent = "Copied. Paste it into a message to me.";
+    await navigator.clipboard.writeText(text || "");
+    said.textContent = done;
   } catch {
     // Clipboard blocked (an older browser, or the page opened straight off
     // the disk). Put it on screen so it can still be selected by hand.
     said.textContent = "Couldn't copy it — here it is to select:";
     const box = el("textarea");
-    box.value = state.summary || "";
+    box.value = text || "";
     box.rows = 12;
     box.style.cssText = "width:100%;margin-top:0.75rem;font:inherit;padding:0.75rem;" +
       "border-radius:0;border:1px solid var(--line);background:var(--surface);color:var(--ink)";
     said.after(box);
     box.select();
   }
-});
+}
 
 // ----------------------------------------------------------------- wiring
 
@@ -1463,9 +1669,9 @@ $("pick-serato").addEventListener("click", async () => {
 });
 
 $("skip-serato").addEventListener("click", useWholeFolder);
-$("repick").addEventListener("click", () => { note(""); show("start"); });
+$("repick").addEventListener("click", () => { stopHearing(); note(""); show("start"); });
 $("stop").addEventListener("click", () => { state.stop = true; });
-$("again").addEventListener("click", () => show("choose"));
+$("again").addEventListener("click", () => { stopHearing(); show("choose"); });
 
 // One place for anything that went wrong, at the top of the page where it
 // is visible whichever screen is showing — a message pinned to the screen
