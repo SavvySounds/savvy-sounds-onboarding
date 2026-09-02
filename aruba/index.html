@@ -1,0 +1,429 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Miles DiPaola — DJ One Sheet — Aruba</title>
+<meta name="robots" content="noindex, nofollow">
+<meta name="description" content="Miles DiPaola, DJ. Los Angeles, available worldwide for destination events and productions.">
+<style>
+/* ---- The faces. Self-hosted, no network. ------------------------- */
+@font-face{font-family:"Bebas Neue";src:url("fonts/bebas-neue-400.woff2") format("woff2");font-weight:400;font-style:normal;font-display:block}
+@font-face{font-family:"Space Mono";src:url("fonts/space-mono-400.woff2") format("woff2");font-weight:400;font-style:normal;font-display:block}
+@font-face{font-family:"Space Mono";src:url("fonts/space-mono-700.woff2") format("woff2");font-weight:700;font-style:normal;font-display:block}
+
+/* ---- The Booth's roles, cream ground only. -----------------------
+   Same names, same values as booth-shell/styles/tokens.css. Pale brass
+   (#c9b27a) appears only as metal on the record, never as text.        */
+:root{
+  --cream:#feffe9; --olive:#2e3105; --fg-2:#43461f; --fg-3:#5c5f2e;
+  --panel:#f7f8da; --sunk:#f1f2cd; --accent:#6b5a2a; --edge:#8a8d5e;
+  --rule:rgba(46,49,5,.24); --press:rgba(46,49,5,.22);
+  --display:"Bebas Neue","Haettenschweiler","Arial Narrow",sans-serif;
+  --mono:"Space Mono",ui-monospace,"SF Mono",monospace;
+  /* the record's own tones — the shell's --platter-* values */
+  --groove:rgba(46,49,5,.085);
+  --groove-lit:rgba(124,103,51,.115);
+  --sheen:rgba(124,103,51,.12);
+  --face:#feffe9; --face-rim:#f1f2cd;
+  color-scheme:light;
+}
+*{box-sizing:border-box}
+html{font-size:100%}
+body{
+  margin:0; background:var(--cream); color:var(--fg-2);
+  font-family:var(--mono); font-size:.78rem; line-height:1.55;
+  -webkit-font-smoothing:antialiased;
+}
+a{color:var(--accent)}
+:focus-visible{outline:2px solid var(--accent); outline-offset:2px}
+/* the one glyph the latin subsets do not carry */
+.arrow{font-family:ui-sans-serif,system-ui,sans-serif}
+.num{font-variant-numeric:tabular-nums}
+
+/* ---- THE RECORD --------------------------------------------------
+   One 12in pressing whose middle sits just past the bottom-right
+   corner, so what shows is the arc of something far too big to fit.
+   The GROOVES turn once every 85s; the SHEEN is a sibling and never
+   turns — a record travelling under a lamp that stays put.
+
+   THE RULE the tones depend on: only --olive and --fg-2 ever sit
+   straight on this. Anything quieter gets its own panel.            */
+.platter{position:fixed; inset:0; z-index:0; overflow:hidden; pointer-events:none}
+.platter .disc-box{position:absolute; width:150vmin; height:150vmin; right:-86vmin; bottom:-86vmin}
+.platter svg{position:absolute; inset:0; width:100%; height:100%}
+.platter .sheen{position:absolute; inset:0;
+  background:radial-gradient(circle at 22% 16%, var(--sheen) 0%, transparent 46%)}
+@keyframes platter-turn{from{transform:rotate(0)}to{transform:rotate(360deg)}}
+.turning{animation:platter-turn 85s linear infinite; transform-origin:50% 50%; will-change:transform}
+@media (prefers-reduced-motion:reduce){.turning{animation:none; transform:rotate(-14deg)}}
+
+/* ---- The sheet --------------------------------------------------- */
+.sheet{position:relative; z-index:1; max-width:54rem; margin:0 auto; padding:2.4rem 2.25rem 2.6rem}
+
+/* ---- Type -------------------------------------------------------- */
+.label{font-family:var(--mono); font-weight:700; font-size:.75rem; line-height:1.35;
+  text-transform:uppercase; letter-spacing:.16em; color:var(--accent); margin:0}
+h2.label{margin:0 0 .45rem}
+
+/* ---- The masthead. Wordmark and its line are ONE lockup. --------- */
+.wordmark{font-family:var(--display); font-weight:400; text-transform:uppercase;
+  font-size:5.6rem; line-height:1; letter-spacing:.04em; color:var(--olive);
+  margin:0 0 -.06em; display:block}
+.mast-line{display:flex; align-items:baseline; justify-content:space-between;
+  gap:.35rem 1.5rem; flex-wrap:wrap; margin-top:.5rem; padding-top:.42rem;
+  border-top:1px solid var(--rule)}
+.mast-sub{margin:0; color:var(--fg-3); font-size:.72rem}
+
+/* ---- The positioning line. Second loudest thing on the page. ----- */
+.pitch{margin:1.05rem 0 0; font-size:.82rem; line-height:1.55;
+  color:var(--fg-2); max-width:44rem}
+.pitch-lead{display:block; font-family:var(--display); font-weight:400;
+  text-transform:uppercase; font-size:2.15rem; line-height:1;
+  letter-spacing:.05em; color:var(--olive); margin-bottom:.34rem}
+
+/* ---- Photos ------------------------------------------------------ */
+figure{margin:0}
+.hero{margin-top:1rem}
+/* On screen the hero is three panels: two clips of Miles at work flanking
+   the still. Side panels are 4:5 (phone footage is tall); the middle is
+   1.5x as wide at 6:5 so all three land at the same height. In print
+   only the still survives, at the wide band the page was set for. */
+.hero-media{display:grid; grid-template-columns:1fr 1.5fr 1fr; gap:.8rem}
+.hero-side,.hero-main{position:relative; border:1px solid var(--rule);
+  background:var(--sunk); overflow:hidden}
+.hero-side{aspect-ratio:4/5}
+.hero-main{aspect-ratio:6/5}
+.hero-media img,.hero-media video{position:absolute; inset:0; width:100%; height:100%;
+  object-fit:cover; object-position:50% 50%; display:block}
+.hero-main img{object-position:70% 50%}
+.hero-media video{z-index:1}
+.hero figcaption{margin-top:.4rem; font-size:.69rem; text-transform:uppercase;
+  letter-spacing:.16em; color:var(--fg-3)}
+
+.shots{display:flex; gap:.8rem; margin-top:.75rem}
+.shot{flex:1 1 0; min-width:0}
+.shot img{display:block; width:100%; aspect-ratio:16/9; object-fit:cover;
+  border:1px solid var(--rule); background:var(--sunk)}
+/* per photo, so no face and no laptop lid is ever cropped out */
+.shot-1 img{object-position:50% 44%}
+.shot-2 img{object-position:50% 24%}
+.shot-3 img{object-position:50% 25%}
+
+/* ---- Panels. Everything quieter than body ink gets its own ground. */
+.panel{background:var(--panel); border:1px solid var(--rule); padding:.72rem .8rem}
+.cols{display:grid; grid-template-columns:1.32fr 1.24fr 1fr; gap:.8rem; margin-top:.8rem; align-items:start}
+.cols>*{min-width:0}
+.cols p{margin:0}
+.block+.block{margin-top:.8rem}
+/* the client roll: an even two-column grid, every row the same height,
+   each row opened by a hairline so it reads as a roll of names */
+.names{display:grid; grid-template-columns:1fr 1fr; column-gap:.55rem;
+  margin:0; padding:0; list-style:none}
+.names li{display:flex; align-items:center; min-height:1.42rem;
+  border-top:1px solid var(--rule); padding:.1rem 0 0;
+  font-family:var(--display); font-weight:400; text-transform:uppercase;
+  font-size:1rem; line-height:1.1; letter-spacing:.05em; color:var(--olive);
+  white-space:nowrap; min-width:0}
+.travels li{font-size:.74rem; line-height:1.35}
+.travels{margin:0; padding:0; list-style:none}
+.travels li+li{margin-top:.45rem}
+.run{margin:0; font-size:.74rem; line-height:1.5}
+/* the roots line gets its own air and a rule, not a jam under the copy */
+.panel .why-2,.aside .why-2{margin-top:.5rem}
+.roots{margin:.75rem 0 0; padding-top:.6rem; border-top:1px solid var(--rule);
+  font-size:.7rem; color:var(--fg-3); line-height:1.5}
+
+/* ---- The quote band, and the aside that now has a home ----------- */
+.quote{margin-top:.75rem; display:flex; gap:.9rem; align-items:stretch}
+.quote-main{flex:1 1 62%; min-width:0}
+.quote blockquote{margin:0; font-size:.86rem; line-height:1.5; color:var(--olive)}
+.quote cite{display:block; margin-top:.4rem; font-style:normal; font-size:.72rem;
+  text-transform:uppercase; letter-spacing:.16em; color:var(--accent)}
+.aside{flex:1 1 38%; min-width:0; background:var(--sunk);
+  border:1px solid var(--rule); padding:.55rem .65rem}
+.aside p{margin:.3rem 0 0; font-size:.7rem; line-height:1.5; color:var(--fg-3)}
+
+/* ---- Contact ----------------------------------------------------- */
+.contact{margin-top:.75rem; display:flex; align-items:center; justify-content:space-between;
+  gap:1.25rem; flex-wrap:wrap}
+.contact ul{margin:.35rem 0 0; padding:0; list-style:none; display:flex; flex-wrap:wrap;
+  gap:.4rem 1rem; font-size:.78rem}
+.contact a{display:inline-flex; align-items:center; min-height:44px;
+  text-decoration:underline; text-decoration-thickness:1px; text-underline-offset:3px;
+  text-decoration-color:rgba(107,90,42,.45)}
+.contact a:hover{text-decoration-color:var(--accent)}
+.contact .listen{display:inline-flex; align-items:center; gap:.7rem; flex-wrap:wrap}
+.contact .listen .label{margin:0}
+
+/* The Booth's one pressable. */
+.solid{display:inline-flex; align-items:center; min-height:44px; padding:0 1.15rem;
+  border:1px solid var(--edge); background:var(--panel); box-shadow:0 4px 0 0 var(--edge);
+  transform:translateY(0); text-decoration:none; color:var(--olive);
+  font-family:var(--mono); font-weight:700; font-size:.75rem;
+  text-transform:uppercase; letter-spacing:.16em; white-space:nowrap;
+  transition:transform 150ms cubic-bezier(.34,1.56,.64,1),
+             box-shadow 150ms cubic-bezier(.34,1.56,.64,1), border-color 150ms ease}
+.solid:hover{transform:translateY(-2px); box-shadow:0 6px 0 0 var(--edge); border-color:var(--accent)}
+.solid:active{transform:translateY(4px); box-shadow:inset 0 2px 5px 0 var(--press); border-color:var(--accent)}
+@media (prefers-reduced-motion:reduce){.solid{transition:none}
+  .hero-media video{display:none}}
+
+/* ---- Phone ------------------------------------------------------- */
+@media (max-width:640px){
+  html{font-size:93.75%}
+  .sheet{padding:1.6rem 1.15rem 2rem}
+  .wordmark{font-size:3rem}
+  .pitch-lead{font-size:1.6rem}
+  .mast-line{gap:.35rem}
+  .hero-media{grid-template-columns:1fr 1fr; grid-template-areas:"main main" "l r"; gap:.6rem}
+  .hero-main{grid-area:main; aspect-ratio:16/9}
+  .hero-main img{object-position:50% 24%}
+  .hero-side:first-child{grid-area:l}
+  .hero-side:last-child{grid-area:r}
+  .cols{grid-template-columns:1fr; gap:.7rem}
+  .names{grid-template-columns:1fr}
+  .shots{flex-wrap:wrap}
+  .shot{flex:1 1 45%}
+  .quote{flex-direction:column}
+  .contact{flex-direction:column; align-items:flex-start}
+  .solid{width:100%; justify-content:center}
+}
+
+/* ---- PRINT: US Letter portrait, exactly one page. -----------------
+   The record is re-hung in inches: radius 7in, middle 1.2in past the
+   bottom-right corner, so the arc enters the right edge around the
+   photo row and leaves the bottom edge a third of the way across.
+   Its tones come up here — 1px strokes on paper carry less than the
+   same strokes on a lit screen. Measured on the proof, not guessed. */
+@page{size:letter; margin:0}
+@media print{
+  html{font-size:10.6px}
+  body{background:var(--cream); position:relative}
+  :root{--groove:rgba(46,49,5,.115); --groove-lit:rgba(124,103,51,.15)}
+  .sheet{max-width:none; width:8.5in; padding:.4in .46in .24in}
+  .platter{position:absolute; inset:0; height:11in; overflow:hidden}
+  .platter .disc-box{width:14in; height:14in; right:-8.2in; bottom:-8.2in}
+  .turning{animation:none; transform:rotate(-14deg)}
+  .wordmark{font-size:100pt}
+  .pitch-lead{font-size:24pt}
+  .pitch{max-width:none}
+  .shot img{aspect-ratio:16/8.5}
+  .hero-side,.cap-screen{display:none}
+  .hero-media{display:block; position:relative; aspect-ratio:16/4.4; border:1px solid var(--rule);
+    background:var(--sunk); overflow:hidden}
+  .hero-main{position:absolute; inset:0; aspect-ratio:auto; border:0}
+  .hero-main img{object-position:50% 32%}
+  .names li{font-size:13pt; min-height:15.5pt; padding-top:1.5pt}
+  /* the pressable prints at rest — border and its hard bottom edge */
+  .solid{min-height:0; padding:.36rem 1.05rem}
+  .contact a{display:inline; min-height:0}
+  .contact{flex-wrap:nowrap}
+  .contact > div{flex:1 1 auto; min-width:0}
+  .contact .solid{flex:0 0 auto}
+  a{text-decoration:none}
+  *{-webkit-print-color-adjust:exact; print-color-adjust:exact}
+}
+</style>
+</head>
+<body>
+
+<div class="platter" aria-hidden="true">
+  <div class="disc-box">
+    <svg class="turning" viewBox="-500 -500 1000 1000">
+      <defs>
+        <radialGradient id="rec-body">
+          <stop offset="0%" stop-color="var(--face)"/>
+          <stop offset="62%" stop-color="var(--face)"/>
+          <stop offset="100%" stop-color="var(--face-rim)"/>
+        </radialGradient>
+      </defs>
+      <circle r="500" fill="url(#rec-body)"/>
+<circle r="167.5" fill="none" stroke="var(--groove-lit)" stroke-width="1.6" stroke-dasharray="226 92"/>
+<circle r="174.72" fill="none" stroke="var(--groove)" stroke-width="1"/>
+<circle r="181.94" fill="none" stroke="var(--groove)" stroke-width="1"/>
+<circle r="189.17" fill="none" stroke="var(--groove-lit)" stroke-width="1.6" stroke-dasharray="255 104"/>
+<circle r="196.39" fill="none" stroke="var(--groove)" stroke-width="1"/>
+<circle r="203.61" fill="none" stroke="var(--groove)" stroke-width="1"/>
+<circle r="210.83" fill="none" stroke="var(--groove)" stroke-width="1"/>
+<circle r="218.06" fill="none" stroke="var(--groove)" stroke-width="1"/>
+<circle r="225.28" fill="none" stroke="var(--groove-lit)" stroke-width="1.6" stroke-dasharray="304 124"/>
+<circle r="232.5" fill="none" stroke="var(--groove)" stroke-width="1"/>
+<circle r="239.72" fill="none" stroke="var(--groove)" stroke-width="1"/>
+<circle r="246.94" fill="none" stroke="var(--groove)" stroke-width="1"/>
+<circle r="254.17" fill="none" stroke="var(--groove)" stroke-width="1"/>
+<circle r="261.39" fill="none" stroke="var(--groove)" stroke-width="1"/>
+<circle r="268.61" fill="none" stroke="var(--groove)" stroke-width="1"/>
+<circle r="275.83" fill="none" stroke="var(--groove-lit)" stroke-width="1.6" stroke-dasharray="372 152"/>
+<circle r="283.06" fill="none" stroke="var(--groove)" stroke-width="1"/>
+<circle r="290.28" fill="none" stroke="var(--groove)" stroke-width="1"/>
+<circle r="297.5" fill="none" stroke="var(--groove)" stroke-width="1"/>
+<circle r="304.72" fill="none" stroke="var(--groove)" stroke-width="1"/>
+<circle r="311.94" fill="none" stroke="var(--groove)" stroke-width="1"/>
+<circle r="319.17" fill="none" stroke="var(--groove)" stroke-width="1"/>
+<circle r="326.39" fill="none" stroke="var(--groove-lit)" stroke-width="1.6" stroke-dasharray="441 180"/>
+<circle r="333.61" fill="none" stroke="var(--groove)" stroke-width="1"/>
+<circle r="340.83" fill="none" stroke="var(--groove)" stroke-width="1"/>
+<circle r="348.06" fill="none" stroke="var(--groove)" stroke-width="1"/>
+<circle r="355.28" fill="none" stroke="var(--groove)" stroke-width="1"/>
+<circle r="362.5" fill="none" stroke="var(--groove)" stroke-width="1"/>
+<circle r="369.72" fill="none" stroke="var(--groove)" stroke-width="1"/>
+<circle r="376.94" fill="none" stroke="var(--groove-lit)" stroke-width="1.6" stroke-dasharray="509 207"/>
+<circle r="384.17" fill="none" stroke="var(--groove)" stroke-width="1"/>
+<circle r="391.39" fill="none" stroke="var(--groove)" stroke-width="1"/>
+<circle r="398.61" fill="none" stroke="var(--groove)" stroke-width="1"/>
+<circle r="405.83" fill="none" stroke="var(--groove)" stroke-width="1"/>
+<circle r="413.06" fill="none" stroke="var(--groove)" stroke-width="1"/>
+<circle r="420.28" fill="none" stroke="var(--groove)" stroke-width="1"/>
+<circle r="427.5" fill="none" stroke="var(--groove-lit)" stroke-width="1.6" stroke-dasharray="577 235"/>
+<circle r="434.72" fill="none" stroke="var(--groove)" stroke-width="1"/>
+<circle r="441.94" fill="none" stroke="var(--groove)" stroke-width="1"/>
+<circle r="449.17" fill="none" stroke="var(--groove)" stroke-width="1"/>
+<circle r="456.39" fill="none" stroke="var(--groove)" stroke-width="1"/>
+<circle r="463.61" fill="none" stroke="var(--groove)" stroke-width="1"/>
+<circle r="470.83" fill="none" stroke="var(--groove)" stroke-width="1"/>
+<circle r="478.06" fill="none" stroke="var(--groove)" stroke-width="1"/>
+<circle r="485.28" fill="none" stroke="var(--groove)" stroke-width="1"/>
+<circle r="492.5" fill="none" stroke="var(--groove-lit)" stroke-width="1.6" stroke-dasharray="665 271"/>
+      <circle r="150" fill="var(--groove)"/>
+      <circle r="17" fill="var(--groove-lit)"/>
+      <circle r="11.9" fill="var(--face)"/>
+    </svg>
+    <div class="sheen"></div>
+  </div>
+</div>
+
+<main class="sheet">
+
+  <header>
+    <h1 class="wordmark">Miles DiPaola</h1>
+    <div class="mast-line">
+      <p class="label">DJ &#183; Los Angeles <span class="arrow">&#8594;</span> Aruba</p>
+      <p class="mast-sub">Based in Los Angeles &#183; available worldwide for destination events and productions.</p>
+    </div>
+    <p class="pitch">
+      <span class="pitch-lead">Curated for the room</span>
+      Miles brings a considered, versatile approach to every set&#8212;balancing familiar
+      favorites, deep cuts, and just the right amount of surprise. From intimate gatherings and
+      brand activations to high-energy dance floors, his mixing style is shaped by the moment,
+      keeping the energy seamless and the room moving.</p>
+  </header>
+
+  <figure class="hero">
+    <div class="hero-media">
+      <div class="hero-side">
+        <img src="photos/hero-left.jpg"
+             alt="Miles DiPaola behind a white DJ booth in a warm-lit studio, headphones around his neck, looking straight at the camera.">
+        <video src="photos/hero-left.mp4" poster="photos/hero-left.jpg" muted loop autoplay playsinline
+               aria-hidden="true" onerror="this.remove()"></video>
+      </div>
+      <div class="hero-main">
+        <img src="photos/hero.jpg"
+             alt="Over Miles DiPaola&#8217;s shoulder at the Sony Pictures holiday party: headphones on, hand on the mixer, a packed dance floor under a canopy of lights.">
+      </div>
+      <div class="hero-side">
+        <img src="photos/hero-right.jpg"
+             alt="Miles DiPaola behind the decks at Temple in San Francisco, his name lit on the wall behind him.">
+        <video src="photos/hero-right.mp4" poster="photos/hero-right.jpg" muted loop autoplay playsinline
+               aria-hidden="true" onerror="this.remove()"></video>
+      </div>
+    </div>
+    <figcaption><span class="cap-screen">Studio session &#183; </span>Sony Pictures holiday party, Los Angeles<span class="cap-screen"> &#183; Temple, San Francisco</span></figcaption>
+  </figure>
+
+  <section class="cols">
+
+    <div class="panel">
+      <h2 class="label">Why Miles</h2>
+      <p>Miles brings the experience to match the moment. With a natural ear for what works,
+        sharp technical skills, and the confidence to take a room somewhere unexpected, he
+        puts real talent and personality into every performance.</p>
+      <p class="why-2">His experience spans intimate events, high-profile brand moments, and
+        major stages. He has opened for Laidback Luke at Mixmag Lab LA, shared the SoFi
+        Stadium stage with Coolio, The Sugarhill Gang, Tone Loc, and Young MC, holds the
+        Delta One Lounge and Sky Club residency at LAX with Delta Air Lines, and is the
+        events DJ for Sony Pictures.</p>
+    </div>
+
+    <div class="panel">
+      <div class="block">
+        <h2 class="label">Trusted by</h2>
+        <ul class="names">
+          <li>Sony Pictures</li><li>Disney</li>
+          <li>Delta</li><li>Google</li>
+          <li>Grammy Museum</li><li>United Airlines</li>
+          <li>W Hotel</li><li>Trader Joe&#8217;s</li>
+          <li>New Balance</li><li>Fabletics</li>
+        </ul>
+      </div>
+      <div class="block">
+        <h2 class="label">Recent rooms</h2>
+        <p class="run">The Grammy Museum &#183; New Balance &#183; Temple San Francisco &#183; private events across Los Angeles and beyond</p>
+      </div>
+    </div>
+
+    <div class="panel">
+      <div class="block">
+        <h2 class="label">Signature events</h2>
+        <p class="run">Corporate &#183; Brand Activations &#183; Hospitality Experiences &#183; Festivals &#183; Luxury Weddings</p>
+      </div>
+      <div class="block">
+        <h2 class="label">Available worldwide</h2>
+        <ul class="travels">
+          <li>DJ + MC bookings</li>
+          <li>Open-format music: funk, disco, house, hip-hop, and beyond</li>
+          <li>Professional Pioneer DJ setup or integration with venue production</li>
+          <li>Vinyl add-on available upon request</li>
+          <li><span class="num">$3M</span> certificate of insurance available</li>
+        </ul>
+      </div>
+    </div>
+
+  </section>
+
+  <div class="shots">
+    <figure class="shot shot-1"><img src="photos/1.jpg"
+      alt="Miles DiPaola in headphones playing gold vinyl on turntables under a New Balance tent at a brand activation in Los Angeles."
+      onerror="this.closest('.shot').remove()"></figure>
+    <figure class="shot shot-2"><img src="photos/2.jpg"
+      alt="Miles DiPaola on the microphone behind his decks at the GRAMMY Museum in Los Angeles, his name lit on the laptop lid."
+      onerror="this.closest('.shot').remove()"></figure>
+    <figure class="shot shot-3"><img src="photos/3.jpg"
+      alt="Miles DiPaola in headphones playing gold vinyl on a beachfront rooftop at sunset, ocean, palms and red umbrellas behind him."
+      onerror="this.closest('.shot').remove()"></figure>
+  </div>
+
+  <section class="quote">
+    <div class="panel quote-main">
+      <blockquote>&#8220;THANK YOU for making our party such a success!! We heard nothing but rave
+        reviews about the music and energy of the night. It&#8217;s the most packed the dance floor
+        has been from start to finish!&#8221;</blockquote>
+      <cite>&#8212; Arabella, Sony Pictures</cite>
+    </div>
+    <div class="aside">
+      <h2 class="label">Off the record</h2>
+      <p>New York raised, LA sharpened. Son of a DJ, trained musician, fifteen years
+        full-time behind the decks.</p>
+      <p class="why-2">Most inspiring artist: Bill Withers.<br>Favorite artist: Radiohead.</p>
+    </div>
+  </section>
+
+  <footer class="panel contact">
+    <div>
+      <h2 class="label">Book Miles</h2>
+      <ul>
+        <li><a href="mailto:hello@savvysoundscollective.com">hello@savvysoundscollective.com</a></li>
+        <li><a href="https://savvysoundscollective.com">savvysoundscollective.com</a></li>
+        <li><a href="https://www.instagram.com/miles_dipaola/">@miles_dipaola</a></li>
+        <li class="num">323.252.1265</li>
+        <li class="listen"><span class="label">Listen</span>
+          <a href="https://www.youtube.com/@MilesDipaola">youtube.com/@MilesDipaola</a>
+          <a href="https://www.mixcloud.com/miles-dipaola/">mixcloud.com/miles-dipaola</a></li>
+      </ul>
+    </div>
+    <a class="solid" href="mailto:hello@savvysoundscollective.com?subject=Aruba%20event%20inquiry">Book Miles for Aruba</a>
+  </footer>
+
+</main>
+</body>
+</html>
