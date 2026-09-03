@@ -137,3 +137,87 @@ Every piece of ink is at or above 7:1 and every action colour at or above
 4.5:1. If a colour is changed, measure again — the gold only clears the bar
 at `#8E6210`; the lighter `#A06D12` used elsewhere in this repo does **not**
 pass as text on paper (3.9:1) and is only safe behind cream.
+
+---
+
+## The same page inside the DJ's own site — `laura-ronnie/squarespace.html`
+
+**What it is.** The very same page, written out a second time as a *body
+fragment* to paste into ONE Code Block on a Squarespace page. It comes out of
+the same build, from the same style, markup and script as `index.html`, so the
+two cannot drift apart. The only differences: no `<html>`/`<head>`/`<body>`
+around it, and it fetches the locked files from GitHub Pages by their full web
+address instead of from the folder beside it.
+
+**Why that works.** GitHub Pages sends `Access-Control-Allow-Origin: *`, so a
+page on the DJ's own domain is allowed to read the locked files. Check that
+header any time with:
+
+    curl -sI https://savvysounds.github.io/savvy-sounds-onboarding/ | grep -i access-control
+
+**The one thing to remember.** The fragment reads the locked files from GitHub
+Pages, so **a change to the page's words only shows up on the site once it has
+been built AND pushed.** Building alone changes nothing the couple can see.
+
+### Pasting it in
+
+1. Edit the page, add a **Code Block**.
+2. Paste the **whole** of `laura-ronnie/squarespace.html` — fonts, style,
+   markup and script. It is one block, not four.
+3. **"Display Source" must be OFF.** With it on, Squarespace prints the code
+   on the page as text instead of running it.
+4. Save.
+
+You do not need to size the block. It sits in whatever grid cell it lands in —
+even a narrow one over on the left — and spreads itself across the window,
+taking its height from the words.
+
+### Proving it without touching the live site — the stub
+
+There is a throwaway page that pretends to be a Squarespace page: a site
+header and footer with their own loud rules (blue Georgia body, red 60px
+headings, hotpink buttons, yellow inputs) wrapped round the real fragment,
+byte for byte. It is not committed. Build it, then serve the repo root:
+
+    PAGE_PASSCODE='<the passcode>' python3 laura-ronnie/build.py
+    python3 <the make_stub script> ; # writes laura-ronnie/squarespace-stub.html
+
+Open `http://localhost:8765/laura-ronnie/squarespace-stub.html` and check:
+
+1. **Neither side bleeds into the other.** The door looks exactly like the
+   standalone page's — paper ground, our own fonts, gold button, cream
+   passcode box. The site's header, its red heading, its blue paragraph and
+   its footer are all untouched.
+2. **It opens.** Type the passcode: the page appears, both songs load and each
+   player shows a real length.
+3. **The files really do come from GitHub Pages.** In the browser console:
+
+       performance.getEntriesByType('resource').filter(e => e.name.endsWith('.enc')).map(e => e.name)
+
+   All three must be `https://savvysounds.github.io/...` addresses while the
+   page itself is on `localhost` — that is the cross-origin fetch working.
+4. **Nothing red in the console.**
+5. **It fills the window from a narrow cell.** Add `?narrow=1` to the stub's
+   address: the fragment is then inside a 300px-wide box pinned to the left,
+   which is the awkward case. At both phone and desktop width the paper must
+   still run edge to edge with the reading column centred, and the page must
+   not scroll sideways.
+
+### The one that catches a real break, for the fragment
+
+With `?narrow=1` open, run this in the console to strip what the script
+measured and leave only the stylesheet:
+
+    var p = document.getElementById('lr-page');
+    p.style.left = p.style.marginLeft = p.style.width = '';
+    p.getBoundingClientRect().left        // expect a big negative number
+
+It should jump hundreds of pixels off to the left — that is the plain CSS
+trick failing, because it assumes the block sits in a centred column. Then:
+
+    window.dispatchEvent(new Event('resize'));
+    p.getBoundingClientRect().left        // expect 0 again
+
+back to 0. If it does not come back, the part that measures the real offset
+has stopped working and the page will hang off the side of any cell that is
+not centred.

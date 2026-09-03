@@ -1,189 +1,8 @@
-#!/usr/bin/env python3
-"""Lock one couple's page behind a passcode, and write it out twice.
-
-    PAGE_PASSCODE='the passcode' python3 laura-ronnie/build.py
-
-Reads content.html and the two mp3s in src-audio/, locks each one with
-OpenSSL, and writes locked/*.enc plus TWO front doors from the one source:
-
-    index.html        a whole page, for GitHub Pages. Fetches the locked
-                      files beside it, by relative path.
-
-    squarespace.html  a body fragment — no doctype, no <html>, no <head> —
-                      to paste into ONE Squarespace Code Block. Fetches the
-                      locked files from GitHub Pages by their full address,
-                      which works because Pages sends
-                      Access-Control-Allow-Origin: *.
-
-Both come out of the same style, markup and script below, so the two cannot
-drift apart. The only difference is the shell around them and where the
-locked files are fetched from.
-
-The plaintext never goes into the repo (see .gitignore); the repo is public
-and the .enc files are useless without the passcode.
-
-The lock is exactly the scheme the Conduit's members' door already uses
-(conduit/build.py `encrypt` + conduit/site/door/unlock.mjs), byte for byte:
-
-    openssl enc -aes-256-cbc -pbkdf2 -iter 100000 -md sha256 -salt
-
-        "Salted__"   8 bytes, ASCII
-        salt         8 bytes
-        ciphertext   the rest, AES-256-CBC, PKCS#7 padded
-
-    key/IV = PBKDF2-HMAC-SHA256(passcode, salt, 100000) -> 48 bytes,
-    first 32 the key, next 16 the IV.
-
-`-pass env:` and not a command-line argument on purpose: an argument is
-visible in `ps` to anybody else on this Mac.
-
-The page HTML goes out as base64 (it is small, and text survives any
-web server). The two songs go out as RAW BINARY — they are 3.8 MB and
-4.3 MB, and base64 would put a third on top of that for nothing; the
-browser fetches them as an ArrayBuffer.
-
-Nothing is written until every file has been decrypted again with the real
-openssl and compared byte for byte with what went in, and a wrong passcode
-has been shown to fail.
-"""
-
-import base64
-import os
-import re
-import subprocess
-import sys
-from pathlib import Path
-
-HERE = Path(__file__).resolve().parent
-LOCKED = HERE / "locked"
-
-# Where the Squarespace fragment fetches the locked files from. GitHub Pages
-# serves them with Access-Control-Allow-Origin: *, so a page on the DJ's own
-# domain is allowed to read them.
-GH_BASE = "https://savvysounds.github.io/savvy-sounds-onboarding/laura-ronnie/"
-
-# content source -> locked file, and whether it ships as base64 text.
-JOBS = [
-    (HERE / "content.html", LOCKED / "page.enc", True),
-    (HERE / "src-audio" / "laura-entrance-preview.mp3", LOCKED / "laura-entrance.enc", False),
-    (HERE / "src-audio" / "cake-instrumental-preview.mp3", LOCKED / "cake.enc", False),
-]
-
-
-class Refused(Exception):
-    """Something is wrong; nothing was written."""
-
-
-def _openssl(args, data, passcode):
-    env = dict(os.environ)
-    env["PAGE_LOCK_PASS"] = passcode
-    try:
-        return subprocess.run(
-            ["openssl", "enc", *args, "-aes-256-cbc", "-pbkdf2", "-iter", "100000",
-             "-md", "sha256", "-salt", "-pass", "env:PAGE_LOCK_PASS"],
-            input=data, capture_output=True, env=env,
-        )
-    except FileNotFoundError:
-        raise Refused("openssl is not on this Mac, so nothing can be locked.")
-
-
-def lock(data, passcode):
-    """bytes -> OpenSSL's own salted format."""
-    r = _openssl([], data, passcode)
-    if r.returncode != 0:
-        raise Refused("openssl refused to lock a file: %s"
-                      % r.stderr.decode("utf-8", "replace").strip())
-    if not r.stdout.startswith(b"Salted__"):
-        raise Refused("openssl wrote something the door cannot unlock. "
-                      "The door expects its salted format.")
-    return r.stdout
-
-
-def unlock(blob, passcode):
-    """OpenSSL's salted format -> (worked?, bytes). Used only to check our work."""
-    r = _openssl(["-d"], blob, passcode)
-    return r.returncode == 0, r.stdout
-
-
-def stocktake(text):
-    """What is actually in the page, said out loud on every build.
-
-    The page's words are the DJ's and he edits them between builds. A build
-    that quietly locks a page which has lost a section is the one mistake
-    this file can make that nobody would see until the couple opened it, so
-    every build prints its own inventory.
-    """
-    return {
-        "moments": len(re.findall(r'class="t-time"', text)),
-        "songs": len(re.findall(r'class="song"', text)),
-        "players": len(re.findall(r"<audio", text)),
-        "links out": len(re.findall(r'<a href="http', text)),
-        "questions": (len(re.findall(r"<fieldset", text))
-                      + len(re.findall(r"<textarea", text))
-                      + len(re.findall(r'<input type="(?:text|url)"', text))),
-    }
-
-
-def build(passcode):
-    if len(passcode) < 8:
-        raise Refused(
-            "Set the passcode first, and make it at least 8 characters:\n\n"
-            "    PAGE_PASSCODE='the passcode' python3 laura-ronnie/build.py\n\n"
-            "Nothing is built without one — the page would go out unlocked.")
-
-    for src, _, _ in JOBS:
-        if not src.exists():
-            raise Refused("Missing %s — nothing was written." % src.name)
-
-    LOCKED.mkdir(exist_ok=True)
-    wrong = passcode + "-not-it"
-
-    for src, dest, as_text in JOBS:
-        plain = src.read_bytes()
-        blob = lock(plain, passcode)
-
-        # Check our work BEFORE writing: the real passcode gives the bytes
-        # back exactly, and a wrong one does not give them back at all.
-        ok, back = unlock(blob, passcode)
-        if not ok or back != plain:
-            raise Refused("%s did not come back the same. Nothing was written."
-                          % src.name)
-        ok, back = unlock(blob, wrong)
-        if ok and back == plain:
-            raise Refused("%s unlocked with the WRONG passcode. Nothing was written."
-                          % src.name)
-
-        dest.write_bytes(base64.b64encode(blob) if as_text else blob)
-        print("  locked  %-34s %9d bytes -> %s"
-              % (src.name, len(plain), dest.name))
-
-    (HERE / "index.html").write_text(standalone(), encoding="utf-8")
-    print("  wrote   index.html            (the whole page, for the web)")
-
-    frag = fragment(GH_BASE)
-    (HERE / "squarespace.html").write_text(frag, encoding="utf-8")
-    print("  wrote   squarespace.html      (%d bytes, paste into ONE Code Block)"
-          % len(frag.encode("utf-8")))
-
-    print("\nAll three came back byte for byte with the passcode, and none of "
-          "them opened without it.")
-
-    counts = stocktake((HERE / "content.html").read_text(encoding="utf-8"))
-    print("\n  The page you just locked holds: "
-          + ", ".join("%d %s" % (v, k) for k, v in counts.items())
-          + ".\n  If that is not what you expect, the page's words changed.")
-
-
-# --------------------------------------------------------------------- #
-# The look. Every rule is scoped to #lr-page: a host site's CSS cannot
-# reach in, and ours cannot leak out over the site's own header and footer.
-# --------------------------------------------------------------------- #
-
-FONTS = """<link rel="preconnect" href="https://fonts.googleapis.com" />
+<!-- Laura & Ronnie — paste this whole thing into ONE Code Block. -->
+<link rel="preconnect" href="https://fonts.googleapis.com" />
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet" />"""
-
-STYLE = r"""<style>
+<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet" />
+<style>
   /* ------------------------------------------------------------------ *
      Everything below is scoped to #lr-page. Nothing here styles a bare
      body, h1, p, input or button, so this can be dropped into a page that
@@ -446,10 +265,8 @@ STYLE = r"""<style>
       animation:none !important; transition:none !important;
     }
   }
-</style>"""
-
-
-MARKUP = r"""<div id="lr-page">
+</style>
+<div id="lr-page">
   <div id="lr-door" class="door">
     <p class="brand">Savvy Sounds</p>
     <p class="door-lede">A page for the two of you.</p>
@@ -465,10 +282,8 @@ MARKUP = r"""<div id="lr-page">
     <p id="lr-msg" role="alert"></p>
   </div>
   <div id="lr-body" class="wrap" hidden></div>
-</div>"""
-
-
-SCRIPT = r"""<script>
+</div>
+<script>
 /*
   The door, browser side. Same lock as the Conduit's members' area:
   OpenSSL's salted format, PBKDF2-HMAC-SHA256 100000 rounds, AES-256-CBC.
@@ -487,7 +302,7 @@ SCRIPT = r"""<script>
 
   var MAGIC = "Salted__";
   var ITERATIONS = 100000;
-  var BASE = "__ASSET_BASE__";
+  var BASE = "https://savvysounds.github.io/savvy-sounds-onboarding/laura-ronnie/";
   var MAILTO = "hello@savvysoundscollective.com";
   var SUBJECT = "Laura & Ronnie — answers";
 
@@ -853,49 +668,4 @@ SCRIPT = r"""<script>
     start();
   }
 })();
-</script>"""
-
-
-def fragment(base):
-    """The body fragment, for one Squarespace Code Block."""
-    return "\n".join([
-        "<!-- Laura & Ronnie — paste this whole thing into ONE Code Block. -->",
-        FONTS, STYLE, MARKUP, SCRIPT.replace("__ASSET_BASE__", base), "",
-    ])
-
-
-def standalone():
-    """The whole page, for GitHub Pages. Same parts, its own shell."""
-    return "\n".join([
-        "<!DOCTYPE html>",
-        '<html lang="en">',
-        "<head>",
-        '<meta charset="UTF-8" />',
-        '<meta name="viewport" content="width=device-width, initial-scale=1.0" />',
-        "<title>Laura &amp; Ronnie</title>",
-        FONTS,
-        # The wrapper paints the paper; this only stops the browser's own
-        # margin showing round the edge of it.
-        "<style>html,body{margin:0; padding:0; background:#F3EEE4; color-scheme:light;}</style>",
-        STYLE,
-        "</head>",
-        "<body>",
-        MARKUP,
-        SCRIPT.replace("__ASSET_BASE__", ""),
-        "</body>",
-        "</html>",
-        "",
-    ])
-
-
-def main():
-    try:
-        build(os.environ.get("PAGE_PASSCODE", ""))
-    except Refused as e:
-        print("\n  Not built.\n\n  %s\n" % e, file=sys.stderr)
-        return 1
-    return 0
-
-
-if __name__ == "__main__":
-    sys.exit(main())
+</script>

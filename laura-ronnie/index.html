@@ -7,206 +7,314 @@
 <link rel="preconnect" href="https://fonts.googleapis.com" />
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
 <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet" />
+<style>html,body{margin:0; padding:0; background:#F3EEE4; color-scheme:light;}</style>
 <style>
-  :root{
-    --surface-base:#F3EEE4; --surface-raised:#FDFBF6; --surface-sunken:#EDE6D8; --surface-line:#DFD6C3;
-    --ink-primary:#221E17; --ink-secondary:#4E4839; --ink-on-mark:#FFF9EE;
-    --action-mark:#8E6210; --action-signal:#157A70;
-    --lift-card:0 1px 2px rgba(60,50,30,.05),0 16px 36px -16px rgba(60,50,30,.18);
-    --font-display:'Barlow Condensed','Arial Narrow',sans-serif;
-    --font-text:'IBM Plex Sans',-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;
-    --font-data:'IBM Plex Mono',ui-monospace,'SF Mono',Menlo,monospace;
-    --radius-card:14px; --radius-well:10px; --radius-control:8px;
-    --ease-out:cubic-bezier(0.16,1,0.3,1);
+  /* ------------------------------------------------------------------ *
+     Everything below is scoped to #lr-page. Nothing here styles a bare
+     body, h1, p, input or button, so this can be dropped into a page that
+     already has its own design without the two fighting.
+   * ------------------------------------------------------------------ */
+
+  #lr-page{
+    /* Tokens live on the wrapper rather than :root so they cannot collide
+       with a variable of the same name on the host site. */
+    --lr-paper:#F3EEE4; --lr-raised:#FDFBF6; --lr-sunken:#EDE6D8; --lr-line:#DFD6C3;
+    --lr-ink:#221E17; --lr-ink-2:#4E4839; --lr-on-mark:#FFF9EE;
+    --lr-gold:#8E6210; --lr-green:#157A70;
+    --lr-lift:0 1px 2px rgba(60,50,30,.05),0 16px 36px -16px rgba(60,50,30,.18);
+    --lr-display:'Barlow Condensed','Arial Narrow',sans-serif;
+    --lr-text:'IBM Plex Sans',-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;
+    --lr-mono:'IBM Plex Mono',ui-monospace,'SF Mono',Menlo,monospace;
+    --lr-r-card:14px; --lr-r-well:10px; --lr-r-ctrl:8px;
+    --lr-ease:cubic-bezier(0.16,1,0.3,1);
+
+    /* Break out of whatever the site drops this into and paint the paper
+       right across the window. This is the no-script baseline and it is
+       correct whenever the column it sits in is centred; the script
+       measures the real offset afterwards and corrects it for a cell that
+       is not. Height is never set — it comes from the words. */
+    position:relative;
+    left:50%;
+    width:100vw;
+    margin-left:-50vw;
+    margin-right:-50vw;
+
+    background:var(--lr-paper);
+    color:var(--lr-ink);
+    font-family:var(--lr-text) !important;
+    font-size:16px;
+    line-height:1.6;
+    text-align:left;
+    -webkit-font-smoothing:antialiased;
   }
-  *{box-sizing:border-box;}
-  body{
-    margin:0; background:var(--surface-base); color:var(--ink-primary); color-scheme:light;
-    font-family:var(--font-text); font-size:16px; line-height:1.6; -webkit-font-smoothing:antialiased;
+  #lr-page, #lr-page *, #lr-page *::before, #lr-page *::after{box-sizing:border-box;}
+
+  /* ---------- put the host site's typography back to neutral ---------- */
+  #lr-page h1,#lr-page h2,#lr-page h3,#lr-page p,#lr-page ul,#lr-page ol,
+  #lr-page li,#lr-page form,#lr-page fieldset,#lr-page legend,#lr-page figure{
+    margin:0; padding:0; border:0; background:none; text-align:left;
   }
-  a{color:var(--action-mark); text-decoration-thickness:1px; text-underline-offset:3px;}
-  a:hover{color:var(--ink-primary);}
-  button:focus-visible,input:focus-visible,textarea:focus-visible,a:focus-visible,audio:focus-visible{
-    outline:2px solid var(--action-signal); outline-offset:2px;
+  #lr-page ul,#lr-page ol{list-style:none;}
+  #lr-page fieldset{min-width:0;}
+  #lr-page h1,#lr-page h2,#lr-page h3{
+    font:inherit; color:inherit; letter-spacing:normal; text-transform:none;
   }
-  .wrap{max-width:680px; margin:0 auto; padding:0 20px 72px;}
+  #lr-page p,#lr-page li,#lr-page span,#lr-page legend,#lr-page label,#lr-page div{
+    font-family:inherit; color:inherit; letter-spacing:normal; text-transform:none;
+  }
+  #lr-page button,#lr-page input,#lr-page textarea{
+    font-family:var(--lr-text) !important;
+    color:var(--lr-ink) !important;
+    font-size:16px; line-height:1.6; margin:0;
+    letter-spacing:normal; text-transform:none;
+  }
+  #lr-page button,#lr-page textarea,
+  #lr-page input:not([type=radio]):not([type=checkbox]){
+    -webkit-appearance:none; appearance:none; background:none; border:0; border-radius:0;
+  }
+  #lr-page input[type=radio]{-webkit-appearance:radio; appearance:radio; background:none;}
+  #lr-page a{
+    color:var(--lr-gold) !important; text-decoration:underline;
+    text-decoration-thickness:1px; text-underline-offset:3px;
+  }
+  #lr-page a:hover{color:var(--lr-ink) !important;}
+  #lr-page [hidden]{display:none !important;}
+  #lr-page button:focus-visible,#lr-page input:focus-visible,
+  #lr-page textarea:focus-visible,#lr-page a:focus-visible,#lr-page audio:focus-visible{
+    outline:2px solid var(--lr-green); outline-offset:2px;
+  }
 
   /* ---------- the door ---------- */
-  .door{max-width:680px; margin:0 auto; padding:96px 20px 72px;}
-  .brand{font-family:var(--font-display); font-weight:600; font-size:19px; letter-spacing:.09em;
-         text-transform:uppercase; margin:0 0 6px; color:var(--ink-primary);}
-  .door-lede{margin:0 0 32px; color:var(--ink-secondary);}
-  .door form{display:flex; flex-wrap:wrap; gap:10px; align-items:flex-end; max-width:420px;}
-  .door label{display:block; font-family:var(--font-display); font-size:15px; font-weight:600;
-              letter-spacing:.09em; text-transform:uppercase; margin-bottom:7px;}
-  .door .field{flex:1 1 200px;}
-  #pass{
-    width:100%; font-family:var(--font-data); font-size:16px; color:var(--ink-primary);
-    background:var(--surface-raised); border:1px solid var(--surface-line);
-    border-radius:var(--radius-well); padding:12px 14px;
+  #lr-page .door{max-width:680px; margin:0 auto; padding:96px 20px 72px;}
+  #lr-page .brand{
+    font-family:var(--lr-display); font-weight:600; font-size:19px; letter-spacing:.09em;
+    text-transform:uppercase; margin:0 0 6px; color:var(--lr-ink);
   }
-  #pass:focus{border-color:var(--action-signal);}
-  #door-msg{min-height:1.6em; margin:16px 0 0; color:var(--ink-primary); max-width:44ch;}
-  #door-msg:empty{margin:0;}
+  #lr-page .door-lede{margin:0 0 32px; color:var(--lr-ink-2);}
+  #lr-page #lr-door-form{display:flex; flex-wrap:wrap; gap:10px; align-items:flex-end; max-width:420px;}
+  #lr-page #lr-door-form label{
+    display:block; font-family:var(--lr-display); font-size:15px; font-weight:600;
+    letter-spacing:.09em; text-transform:uppercase; margin-bottom:7px; color:var(--lr-ink);
+  }
+  #lr-page .field{flex:1 1 200px;}
+  #lr-page #lr-pass{
+    width:100%; font-family:var(--lr-mono) !important; font-size:16px;
+    background:var(--lr-raised); border:1px solid var(--lr-line);
+    border-radius:var(--lr-r-well); padding:12px 14px;
+  }
+  #lr-page #lr-pass:focus{border-color:var(--lr-green);}
+  #lr-page #lr-msg{min-height:1.6em; margin:16px 0 0; color:var(--lr-ink); max-width:44ch;}
+  #lr-page #lr-msg:empty{margin:0;}
 
-  .btn{
-    font-family:var(--font-text); font-size:15px; font-weight:600; border-radius:var(--radius-control);
-    padding:12px 24px; cursor:pointer; border:1px solid transparent;
-    transition:background .15s var(--ease-out), color .15s var(--ease-out), border-color .15s var(--ease-out);
+  /* ---------- buttons ---------- */
+  #lr-page .btn{
+    font-family:var(--lr-text) !important; font-size:15px; font-weight:600;
+    border-radius:var(--lr-r-ctrl); padding:12px 24px; cursor:pointer;
+    border:1px solid transparent; min-height:44px;
+    transition:background .15s var(--lr-ease), color .15s var(--lr-ease), border-color .15s var(--lr-ease);
   }
-  .btn-primary{background:var(--action-mark); color:var(--ink-on-mark); border-color:var(--action-mark);}
-  .btn-primary:hover{background:var(--ink-primary); border-color:var(--ink-primary);}
-  .btn-primary[disabled]{opacity:.65; cursor:default;}
-  .btn-quiet{background:transparent; color:var(--ink-primary); border-color:var(--surface-line); font-weight:500;}
-  .btn-quiet:hover{border-color:var(--action-signal);}
-  .btn-quiet.done{background:var(--action-signal); border-color:var(--action-signal); color:var(--ink-on-mark);}
+  #lr-page .btn-primary{
+    background:var(--lr-gold) !important; color:var(--lr-on-mark) !important;
+    border-color:var(--lr-gold);
+  }
+  #lr-page .btn-primary:hover{background:var(--lr-ink) !important; border-color:var(--lr-ink);}
+  #lr-page .btn-primary[disabled]{opacity:.65; cursor:default;}
+  #lr-page .btn-quiet{
+    background:none !important; color:var(--lr-ink) !important;
+    border-color:var(--lr-line); font-weight:500;
+  }
+  #lr-page .btn-quiet:hover{border-color:var(--lr-green);}
+  #lr-page .btn-quiet.done{
+    background:var(--lr-green) !important; border-color:var(--lr-green);
+    color:var(--lr-on-mark) !important;
+  }
 
   /* ---------- the page ---------- */
-  .hero{padding:64px 0 8px;}
-  .eyebrow{font-family:var(--font-display); font-weight:600; font-size:15px; letter-spacing:.09em;
-           text-transform:uppercase; color:var(--action-mark); margin:0 0 14px;}
-  .hero h1{font-family:var(--font-display); font-weight:600; font-size:clamp(44px,11vw,72px);
-           line-height:.96; letter-spacing:.01em; text-transform:uppercase; margin:0 0 16px;}
-  .hero-when{font-family:var(--font-data); font-size:13.5px; line-height:1.6;
-             color:var(--ink-secondary); margin:0 0 22px;}
-  .hero-lede{font-size:17px; margin:0; max-width:44ch;}
+  #lr-page .wrap{max-width:680px; margin:0 auto; padding:0 20px 72px; width:100%;}
+  #lr-page .hero{padding:64px 0 8px;}
+  #lr-page .eyebrow{
+    font-family:var(--lr-display); font-weight:600; font-size:15px; letter-spacing:.09em;
+    text-transform:uppercase; color:var(--lr-gold); margin:0 0 14px;
+  }
+  #lr-page .hero h1{
+    font-family:var(--lr-display); font-weight:600; font-size:clamp(44px,11vw,72px);
+    line-height:.96; letter-spacing:.01em; text-transform:uppercase; margin:0 0 16px;
+    color:var(--lr-ink);
+  }
+  #lr-page .hero-when{
+    font-family:var(--lr-mono); font-size:13.5px; line-height:1.6;
+    color:var(--lr-ink-2); margin:0 0 22px;
+  }
+  #lr-page .hero-lede{font-size:17px; margin:0; max-width:44ch;}
 
-  .card{background:var(--surface-raised); border:1px solid var(--surface-line);
-        border-radius:var(--radius-card); padding:28px 26px; margin:22px 0; box-shadow:var(--lift-card);}
-  .card h2{font-family:var(--font-display); font-size:24px; font-weight:600; letter-spacing:.05em;
-           text-transform:uppercase; margin:0 0 18px;}
-  .lede{color:var(--ink-secondary); margin:16px 0 0;}
-  .card > .lede:first-of-type{margin:-6px 0 18px;}
+  #lr-page .card{
+    background:var(--lr-raised); border:1px solid var(--lr-line);
+    border-radius:var(--lr-r-card); padding:28px 26px; margin:22px 0;
+    box-shadow:var(--lr-lift); width:100%;
+  }
+  #lr-page .card h2{
+    font-family:var(--lr-display); font-size:24px; font-weight:600; letter-spacing:.05em;
+    text-transform:uppercase; margin:0 0 18px; color:var(--lr-ink);
+  }
+  #lr-page .lede{color:var(--lr-ink-2); margin:16px 0 0;}
+  #lr-page .card > .lede:first-of-type{margin:-6px 0 18px;}
 
   /* timeline */
-  .timeline{list-style:none; margin:0; padding:0;}
-  .timeline li{display:flex; gap:16px; padding:15px 0; border-top:1px solid var(--surface-line);}
-  .timeline li:first-child{border-top:none; padding-top:0;}
-  .t-time{font-family:var(--font-data); font-size:12.5px; line-height:1.75; margin:0;
-          flex:0 0 82px; color:var(--ink-primary); font-variant-numeric:tabular-nums;}
-  .t-body{flex:1 1 auto; min-width:0;}
-  .t-body p{margin:0;}
-  .t-name{font-weight:600;}
-  .t-body p + p{margin-top:5px; color:var(--ink-secondary);}
-  .t-note{margin-top:10px !important; padding:11px 13px; background:var(--surface-sunken);
-          border:1px solid var(--surface-line); border-radius:var(--radius-well); font-size:14.5px;}
+  #lr-page .timeline{list-style:none; margin:0; padding:0;}
+  #lr-page .timeline li{
+    display:flex; gap:16px; padding:15px 0; border-top:1px solid var(--lr-line);
+  }
+  #lr-page .timeline li:first-child{border-top:none; padding-top:0;}
+  #lr-page .t-time{
+    font-family:var(--lr-mono); font-size:12.5px; line-height:1.75; margin:0;
+    flex:0 0 82px; color:var(--lr-ink); font-variant-numeric:tabular-nums;
+  }
+  #lr-page .t-body{flex:1 1 auto; min-width:0;}
+  #lr-page .t-body p{margin:0;}
+  #lr-page .t-name{font-weight:600;}
+  #lr-page .t-body p + p{margin-top:5px; color:var(--lr-ink-2);}
+  #lr-page .t-note{
+    margin-top:10px !important; padding:11px 13px; background:var(--lr-sunken);
+    border:1px solid var(--lr-line); border-radius:var(--lr-r-well); font-size:14.5px;
+  }
 
   /* songs */
-  .songs{display:flex; flex-direction:column;}
-  .song{padding:16px 0; border-top:1px solid var(--surface-line);}
-  .song:first-child{border-top:none; padding-top:0;}
-  .song p{margin:0;}
-  .s-moment{font-family:var(--font-display); font-size:15px; font-weight:600; letter-spacing:.09em;
-            text-transform:uppercase; color:var(--action-mark); margin-bottom:5px !important;}
-  .s-title{font-size:16.5px;}
-  .s-tag{font-family:var(--font-data); font-size:12px; letter-spacing:.03em; color:var(--ink-secondary);
-         white-space:nowrap;}
-  .s-note{margin-top:5px !important; color:var(--ink-secondary); font-size:15px;}
+  #lr-page .songs{display:flex; flex-direction:column;}
+  #lr-page .song{padding:16px 0; border-top:1px solid var(--lr-line);}
+  #lr-page .song:first-child{border-top:none; padding-top:0;}
+  #lr-page .song p{margin:0;}
+  #lr-page .s-moment{
+    font-family:var(--lr-display); font-size:15px; font-weight:600; letter-spacing:.09em;
+    text-transform:uppercase; color:var(--lr-gold); margin-bottom:5px !important;
+  }
+  #lr-page .s-title{font-size:16.5px;}
+  #lr-page .s-tag{
+    font-family:var(--lr-mono); font-size:12px; letter-spacing:.03em;
+    color:var(--lr-ink-2); white-space:nowrap;
+  }
+  #lr-page .s-note{margin-top:5px !important; color:var(--lr-ink-2); font-size:15px;}
 
-  .player{margin-top:13px; padding:13px; background:var(--surface-sunken);
-          border:1px solid var(--surface-line); border-radius:var(--radius-well);}
-  .p-label{font-family:var(--font-display); font-size:14px; font-weight:600; letter-spacing:.09em;
-           text-transform:uppercase; margin-bottom:9px !important;}
-  .p-status{font-size:14.5px; color:var(--ink-secondary);}
-  .player audio{width:100%; display:block;}
-  /* `display:block` above beats the browser's own rule for [hidden], so say
-     it again here — without this the players show before they have a song. */
-  .player audio[hidden], [hidden]{display:none !important;}
+  #lr-page .player{
+    margin-top:13px; padding:13px; background:var(--lr-sunken);
+    border:1px solid var(--lr-line); border-radius:var(--lr-r-well);
+  }
+  #lr-page .p-label{
+    font-family:var(--lr-display); font-size:14px; font-weight:600; letter-spacing:.09em;
+    text-transform:uppercase; margin-bottom:9px !important; color:var(--lr-ink);
+  }
+  #lr-page .p-status{font-size:14.5px; color:var(--lr-ink-2);}
+  /* the player takes the width of the card, never of the block it was
+     pasted into */
+  #lr-page .player audio{width:100%; max-width:100%; display:block;}
+  #lr-page .player audio[hidden]{display:none !important;}
 
   /* lists */
-  .links{list-style:none; margin:0; padding:0;}
-  .links li + li{margin-top:11px;}
-  .links a{font-size:16.5px;}
-  .nope{margin:0; padding:0 0 0 20px;}
-  .nope li{margin-bottom:7px;}
+  #lr-page .links{list-style:none; margin:0; padding:0;}
+  #lr-page .links li + li{margin-top:11px;}
+  #lr-page .links a{font-size:16.5px;}
+  #lr-page .nope{margin:0; padding:0 0 0 20px; list-style:disc;}
+  #lr-page .nope li{margin-bottom:7px;}
 
   /* form */
-  .fld{display:block; font-weight:600; font-size:15px; margin:22px 0 8px;}
-  .fld.sub{font-weight:500; margin-top:14px;}
-  form > .fld:first-child{margin-top:0;}
-  input[type=text], input[type=url], textarea{
-    width:100%; font-family:var(--font-text); font-size:16px; color:var(--ink-primary);
-    background:var(--surface-sunken); border:1px solid var(--surface-line);
-    border-radius:var(--radius-well); padding:12px 13px;
+  #lr-page .fld{display:block; font-weight:600; font-size:15px; margin:22px 0 8px;}
+  #lr-page .fld.sub{font-weight:500; margin-top:14px;}
+  #lr-page form > .fld:first-child{margin-top:0;}
+  #lr-page input[type=text],#lr-page input[type=url],#lr-page textarea{
+    width:100%; max-width:100%;
+    background:var(--lr-sunken); border:1px solid var(--lr-line);
+    border-radius:var(--lr-r-well); padding:12px 13px;
   }
-  input:focus, textarea:focus{border-color:var(--action-signal);}
-  input::placeholder, textarea::placeholder{color:var(--ink-secondary); opacity:1;}
-  textarea{resize:vertical;}
-  .fld-set{border:1px solid var(--surface-line); border-radius:var(--radius-well);
-           padding:16px 16px 18px; margin:22px 0 0;}
+  #lr-page input:focus,#lr-page textarea:focus{border-color:var(--lr-green);}
+  #lr-page input::placeholder,#lr-page textarea::placeholder{color:var(--lr-ink-2); opacity:1;}
+  #lr-page textarea{resize:vertical;}
+  #lr-page .fld-set{
+    border:1px solid var(--lr-line); border-radius:var(--lr-r-well);
+    padding:16px 16px 18px; margin:22px 0 0;
+  }
   /* These questions are long, so on a phone the legend wraps to two or three
      lines — and a wrapped legend straddles the top border, which then runs
      straight through the words. Floating it drops it inside the box as an
      ordinary block and lets the border close; the rest of the set clears it.
      `clear` rather than `overflow:hidden`, which would crop the focus rings. */
-  .fld-set legend{float:left; width:100%; padding:0; margin:0 0 10px;
-                  font-weight:600; font-size:15px;}
-  .fld-set > *:not(legend){clear:both;}
+  #lr-page .fld-set legend{
+    float:left; width:100%; padding:0; margin:0 0 10px;
+    font-weight:600; font-size:15px;
+  }
+  #lr-page .fld-set > *:not(legend){clear:both;}
   /* A finger, not a mouse: each choice is a 44px-tall row and the whole
      width of it is the label, so tapping the words picks the button. */
-  .opt{display:flex; align-items:center; gap:10px; min-height:44px;
-       padding:6px 0; margin-top:2px; cursor:pointer;}
-  .opt input{margin:0; width:20px; height:20px; flex:none; accent-color:var(--action-mark);}
-  .actions{display:flex; flex-wrap:wrap; gap:11px; margin-top:28px;}
-  .say{min-height:1.6em; margin:14px 0 0; color:var(--ink-secondary);}
-  .say:empty{margin:0;}
+  #lr-page .opt{
+    display:flex; align-items:center; gap:10px; min-height:44px;
+    padding:6px 0; margin-top:2px; cursor:pointer; width:100%;
+  }
+  #lr-page .opt input{
+    margin:0; width:20px; height:20px; flex:none; accent-color:var(--lr-gold);
+  }
+  #lr-page .actions{display:flex; flex-wrap:wrap; gap:11px; margin-top:28px;}
+  #lr-page .say{min-height:1.6em; margin:14px 0 0; color:var(--lr-ink-2);}
+  #lr-page .say:empty{margin:0;}
 
-  .page-foot{padding:8px 0 0; color:var(--ink-secondary);}
-  .page-foot p{margin:0;}
+  #lr-page .page-foot{padding:8px 0 0; color:var(--lr-ink-2);}
+  #lr-page .page-foot p{margin:0;}
 
   @media(max-width:520px){
-    .card{padding:22px 18px;}
-    .timeline li{flex-direction:column; gap:5px;}
-    .t-time{flex:none;}
+    #lr-page .card{padding:22px 18px;}
+    #lr-page .timeline li{flex-direction:column; gap:5px;}
+    #lr-page .t-time{flex:none;}
+    #lr-page .door{padding:64px 20px 56px;}
   }
 
-  .fade{animation:fade .5s var(--ease-out) both;}
-  @keyframes fade{from{opacity:0; transform:translateY(10px)} to{opacity:1; transform:none}}
-  @media(prefers-reduced-motion:reduce){ *,*::before,*::after{animation:none!important; transition:none!important;} }
+  #lr-page .fade{animation:lr-fade .5s var(--lr-ease) both;}
+  @keyframes lr-fade{from{opacity:0; transform:translateY(10px)} to{opacity:1; transform:none}}
+  @media(prefers-reduced-motion:reduce){
+    #lr-page *,#lr-page *::before,#lr-page *::after{
+      animation:none !important; transition:none !important;
+    }
+  }
 </style>
 </head>
 <body>
-
-<main id="door" class="door">
-  <p class="brand">Savvy Sounds</p>
-  <p class="door-lede">A page for the two of you.</p>
-  <form id="door-form" novalidate>
-    <div class="field">
-      <label for="pass">Passcode</label>
-      <input id="pass" name="pass" type="password" autocomplete="off"
-             autocapitalize="off" autocorrect="off" spellcheck="false"
-             aria-describedby="door-msg" />
-    </div>
-    <button type="submit" id="open-btn" class="btn btn-primary">Open</button>
-  </form>
-  <p id="door-msg" role="alert"></p>
-</main>
-
-<main id="page" class="wrap" hidden></main>
-
+<div id="lr-page">
+  <div id="lr-door" class="door">
+    <p class="brand">Savvy Sounds</p>
+    <p class="door-lede">A page for the two of you.</p>
+    <form id="lr-door-form" novalidate>
+      <div class="field">
+        <label for="lr-pass">Passcode</label>
+        <input id="lr-pass" name="lr-pass" type="password" autocomplete="off"
+               autocapitalize="off" autocorrect="off" spellcheck="false"
+               aria-describedby="lr-msg" />
+      </div>
+      <button type="submit" id="lr-open" class="btn btn-primary">Open</button>
+    </form>
+    <p id="lr-msg" role="alert"></p>
+  </div>
+  <div id="lr-body" class="wrap" hidden></div>
+</div>
 <script>
 /*
   The door, browser side. Same lock as the Conduit's members' area:
   OpenSSL's salted format, PBKDF2-HMAC-SHA256 100000 rounds, AES-256-CBC.
   Browser natives only — no library, nothing loaded from anywhere else.
 
-  WebCrypto only exists in a secure context: https, or localhost. Opened
-  as a file:// this page cannot unlock anything. See VERIFY.md.
+  Written to survive being pasted into somebody else's page: it takes no
+  globals, waits for the document properly rather than assuming it is last,
+  looks everything up inside its own wrapper, and does nothing at all if the
+  wrapper is not there.
+
+  WebCrypto only exists in a secure context: https, or localhost. Opened as
+  a file:// this page cannot unlock anything. See VERIFY.md.
 */
 (function () {
   "use strict";
 
   var MAGIC = "Salted__";
   var ITERATIONS = 100000;
+  var BASE = "";
   var MAILTO = "hello@savvysoundscollective.com";
   var SUBJECT = "Laura & Ronnie — answers";
 
-  var doorEl = document.getElementById("door");
-  var pageEl = document.getElementById("page");
-  var formEl = document.getElementById("door-form");
-  var passEl = document.getElementById("pass");
-  var btnEl = document.getElementById("open-btn");
-  var msgEl = document.getElementById("door-msg");
+  var rootEl, doorEl, bodyEl, formEl, passEl, btnEl, msgEl;
 
   // One state, three values. The Open button is guarded by this and not by
   // a timer: two fast presses, and the second one finds "working" and stops.
@@ -286,6 +394,36 @@
   }
 
   // ------------------------------------------------------------------ //
+  // Filling the window.
+  // ------------------------------------------------------------------ //
+
+  /* The stylesheet already pulls the wrapper out to the full window, which
+     is right whenever the column it was pasted into is centred. A page
+     builder can just as easily drop it in a narrow cell over on the left,
+     and then a fixed -50vw pulls it to the wrong place — so measure where
+     the cell actually put us and take exactly that much back.
+
+     `clientWidth` and not `100vw` on purpose: it leaves out the scrollbar,
+     so the page cannot end up scrolling sideways by its width. */
+  function fillWindow() {
+    if (!rootEl) return;
+    var s = rootEl.style;
+    s.left = "0px";
+    s.marginLeft = "0px";
+    s.marginRight = "0px";
+    s.width = "auto";
+    var offset = rootEl.getBoundingClientRect().left;
+    s.marginLeft = (-offset) + "px";
+    s.width = document.documentElement.clientWidth + "px";
+  }
+
+  var refit = null;
+  function fillWindowSoon() {
+    clearTimeout(refit);
+    refit = setTimeout(fillWindow, 120);
+  }
+
+  // ------------------------------------------------------------------ //
   // Opening.
   // ------------------------------------------------------------------ //
 
@@ -304,7 +442,7 @@
     var lower = passcode.toLowerCase();
 
     try {
-      html = await unlockText("locked/page.enc", passcode);
+      html = await unlockText(BASE + "locked/page.enc", passcode);
     } catch (e) {
       failure = e;
       /* A phone keyboard puts a capital on the first letter by reflex, so
@@ -314,7 +452,7 @@
          different problem and a second go would not help. */
       if (!e.gone && lower !== passcode) {
         try {
-          html = await unlockText("locked/page.enc", lower);
+          html = await unlockText(BASE + "locked/page.enc", lower);
           used = lower;
           failure = null;
         } catch (e2) {
@@ -336,18 +474,21 @@
       return;
     }
 
-    pageEl.innerHTML = html;
-    pageEl.hidden = false;
-    pageEl.classList.add("fade");
+    bodyEl.innerHTML = html;
+    bodyEl.hidden = false;
+    bodyEl.classList.add("fade");
     doorEl.remove();
-    document.title = "Laura & Ronnie";
     state = "open";
     remember(used);
 
+    // A long page can bring on a scrollbar, which changes how wide the
+    // window is; measure again now there is something in it.
+    fillWindow();
+
     wireForm();
     // The songs are big; the page is readable long before they land.
-    player("entrance", "locked/laura-entrance.enc", used);
-    player("cake", "locked/cake.enc", used);
+    player("entrance", BASE + "locked/laura-entrance.enc", used);
+    player("cake", BASE + "locked/cake.enc", used);
   }
 
   function tryOpen(ev) {
@@ -355,16 +496,6 @@
     passEl.removeAttribute("aria-invalid");
     open(passEl.value.trim(), false);
   }
-
-  formEl.addEventListener("submit", tryOpen);
-
-  // The Go key on a phone keyboard, said out loud. Most browsers turn it
-  // into a submit on their own, but this page is opened on a phone first
-  // and that is the main way in, so it does not get left to chance.
-  // `state` still guards it: Go and then Open cannot open the page twice.
-  passEl.addEventListener("keydown", function (ev) {
-    if (ev.key === "Enter") tryOpen(ev);
-  });
 
   // ------------------------------------------------------------------ //
   // The two players.
@@ -389,8 +520,8 @@
   }
 
   async function player(name, url, passcode) {
-    var audio = document.getElementById("audio-" + name);
-    var status = document.getElementById("p-status-" + name);
+    var audio = bodyEl.querySelector("#audio-" + name);
+    var status = bodyEl.querySelector("#p-status-" + name);
     if (!audio || !status) return;
     try {
       var buf = await unlockBytes(url, passcode);
@@ -418,7 +549,7 @@
      their questions sitting in the door would hand over the very thing
      the lock is for. */
   function answers() {
-    var form = document.getElementById("answers");
+    var form = bodyEl.querySelector("#answers");
     if (!form) return "";
     var lines = [];
     var done = {};
@@ -455,10 +586,10 @@
   }
 
   function wireForm() {
-    var form = document.getElementById("answers");
-    var send = document.getElementById("send-btn");
-    var copy = document.getElementById("copy-btn");
-    var say = document.getElementById("say");
+    var form = bodyEl.querySelector("#answers");
+    var send = bodyEl.querySelector("#send-btn");
+    var copy = bodyEl.querySelector("#copy-btn");
+    var say = bodyEl.querySelector("#say");
     if (!form || !send || !copy || !say) return;
 
     // Kept current as they type, so the button always carries exactly what
@@ -496,11 +627,55 @@
     });
   }
 
-  // A reload inside the same tab should not ask again.
-  var saved = remembered();
-  if (saved) open(saved, true);
+  // ------------------------------------------------------------------ //
+  // Starting up, whenever the host page happens to get here.
+  // ------------------------------------------------------------------ //
+
+  function start() {
+    rootEl = document.getElementById("lr-page");
+    if (!rootEl) return;                       // not our page; do nothing
+    doorEl = rootEl.querySelector("#lr-door");
+    bodyEl = rootEl.querySelector("#lr-body");
+    formEl = rootEl.querySelector("#lr-door-form");
+    passEl = rootEl.querySelector("#lr-pass");
+    btnEl = rootEl.querySelector("#lr-open");
+    msgEl = rootEl.querySelector("#lr-msg");
+    if (!doorEl || !bodyEl || !formEl || !passEl || !btnEl || !msgEl) return;
+
+    fillWindow();
+    window.addEventListener("resize", fillWindowSoon);
+    window.addEventListener("orientationchange", fillWindowSoon);
+
+    /* On a phone the address bar slides away and the window quietly gets
+       taller and sometimes wider; Safari reports that here rather than as
+       a plain resize. Watching the page element instead does NOT work —
+       once this wrapper is a stale width it is what holds the page open,
+       so its box stops changing and the reading never corrects itself. */
+    if (window.visualViewport) {
+      window.visualViewport.addEventListener("resize", fillWindowSoon);
+    }
+
+    formEl.addEventListener("submit", tryOpen);
+
+    // The Go key on a phone keyboard, said out loud. Most browsers turn it
+    // into a submit on their own, but this page is opened on a phone first
+    // and that is the main way in, so it does not get left to chance.
+    // `state` still guards it: Go and then Open cannot open the page twice.
+    passEl.addEventListener("keydown", function (ev) {
+      if (ev.key === "Enter") tryOpen(ev);
+    });
+
+    // A reload inside the same tab should not ask again.
+    var saved = remembered();
+    if (saved) open(saved, true);
+  }
+
+  if (document.readyState === "loading") {
+    document.addEventListener("DOMContentLoaded", start);
+  } else {
+    start();
+  }
 })();
 </script>
-
 </body>
 </html>
