@@ -142,7 +142,10 @@
   .fld-set legend{float:left; width:100%; padding:0; margin:0 0 10px;
                   font-weight:600; font-size:15px;}
   .fld-set > *:not(legend){clear:both;}
-  .opt{display:flex; align-items:flex-start; gap:10px; margin-top:11px; cursor:pointer;}
+  /* A finger, not a mouse: each choice is a 44px-tall row and the whole
+     width of it is the label, so tapping the words picks the button. */
+  .opt{display:flex; align-items:center; gap:10px; min-height:44px;
+       padding:6px 0; margin-top:2px; cursor:pointer;}
   .opt input{margin:0; width:20px; height:20px; flex:none; accent-color:var(--action-mark);}
   .actions{display:flex; flex-wrap:wrap; gap:11px; margin-top:28px;}
   .say{min-height:1.6em; margin:14px 0 0; color:var(--ink-secondary);}
@@ -297,14 +300,34 @@
     btnEl.disabled = true;
     if (!quiet) msgEl.textContent = "Opening…";
 
-    var html;
+    var html = null, used = passcode, failure = null;
+    var lower = passcode.toLowerCase();
+
     try {
       html = await unlockText("locked/page.enc", passcode);
     } catch (e) {
+      failure = e;
+      /* A phone keyboard puts a capital on the first letter by reflex, so
+         "Sunset" turns up for "sunset" and the couple get told their own
+         passcode is wrong. Try it once in lower case before saying so.
+         Not retried when the file could not be fetched at all — that is a
+         different problem and a second go would not help. */
+      if (!e.gone && lower !== passcode) {
+        try {
+          html = await unlockText("locked/page.enc", lower);
+          used = lower;
+          failure = null;
+        } catch (e2) {
+          failure = e2;
+        }
+      }
+    }
+
+    if (failure) {
       state = "idle";
       btnEl.disabled = false;
       forget();
-      msgEl.textContent = e.gone
+      msgEl.textContent = failure.gone
         ? "This page won't open — tell Miles."
         : "That's not it — check the passcode Miles sent you.";
       passEl.setAttribute("aria-invalid", "true");
@@ -319,12 +342,12 @@
     doorEl.remove();
     document.title = "Laura & Ronnie";
     state = "open";
-    remember(passcode);
+    remember(used);
 
     wireForm();
     // The songs are big; the page is readable long before they land.
-    player("entrance", "locked/laura-entrance.enc", passcode);
-    player("cake", "locked/cake.enc", passcode);
+    player("entrance", "locked/laura-entrance.enc", used);
+    player("cake", "locked/cake.enc", used);
   }
 
   function tryOpen(ev) {

@@ -71,30 +71,40 @@ Serve the repo root, then open `http://localhost:8765/laura-ronnie/`.
 1. **A wrong passcode is refused.** Type anything wrong, press Open (or the
    Return key). Expect "That's not it — check the passcode Miles sent you.",
    the typing box still highlighted and ready, and no page behind it.
-2. **The right passcode opens it.** Expect the couple's names as a big
+2. **A capital first letter still opens it.** Phone keyboards put a capital on
+   the first letter by reflex, so type the passcode with its first letter
+   capitalised: it must open normally, songs and all. Then change one letter
+   in the middle to make it genuinely wrong and try that both ways, plain and
+   capitalised — both must still be refused with the same message, and
+   neither may be remembered.
+3. **The right passcode opens it.** Expect the couple's names as a big
    heading, ten moments in the running order, and nine song cards.
-3. **Both songs play.** Each one says "Loading the song…" and is then
+4. **Both songs play.** Each one says "Loading the song…" and is then
    replaced by a player. The two lengths must read **3:56** and **4:28** on
    the player itself. If a player never appears, the song did not unscramble.
-4. **Pressing Open twice fast does not double the page.** Press Open twice as
+5. **Pressing Open twice fast does not double the page.** Press Open twice as
    fast as you can. There must still be exactly ONE big heading, one form and
    one "Send to Miles" button.
-5. **A reload does not ask again.** Refresh the tab: the page comes straight
+6. **A reload does not ask again.** Refresh the tab: the page comes straight
    back with no passcode box. Open it in a brand new tab and it asks again —
    that is correct, the passcode is only remembered for the one tab.
-6. **The form writes the email.** Fill in a few answers, leave others blank,
+7. **The form writes the email.** Fill in a few answers, leave others blank,
    press "Send to Miles". The mail app opens with the subject
    "Laura & Ronnie — answers" and a message containing only the questions
    that were answered — blanks must not appear.
-7. **Copy works.** Press "Copy the answers". The button must change its word
+8. **Copy works.** Press "Copy the answers". The button must change its word
    to "Copied" **and** turn green, then go back on its own after about three
    seconds. Paste somewhere to confirm you got the same text as the email.
-8. **Keyboard only.** With the Tab key alone you must reach: the passcode box
-   and Open on the front door; then both players, both playlist links, all
-   ten form questions, both buttons and the email link at the bottom. Every
-   one of them shows a clear green ring while it is selected.
-9. **Nothing red in the browser's console** at any point.
-10. **On a phone.** At 375px wide the page must be one column with no
+9. **The choices are big enough for a thumb.** Every Yes/No/After-cake row
+   must be at least 44px tall and the whole row must be tappable — tap the
+   words at the far right of a row, nowhere near the little circle, and it
+   must still select that choice.
+10. **Keyboard only.** With the Tab key alone you must reach: the passcode box
+    and Open on the front door; then both players, both playlist links, all
+    ten form questions, both buttons and the email link at the bottom. Every
+    one of them shows a clear green ring while it is selected.
+11. **Nothing red in the browser's console** at any point.
+12. **On a phone.** At 375px wide the page must be one column with no
     sideways scrolling.
 
 ### The one that catches a real break
