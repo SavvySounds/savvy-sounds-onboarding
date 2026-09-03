@@ -1,0 +1,7 @@
+# This repo is public. Nothing in here that is the couple's own goes in it
+# in the clear — only the locked/*.enc files, which are useless without the
+# passcode.
+#
+# The plaintext lives on Miles's Mac. Keep it; it is what build.py reads.
+src-audio/
+content.html
