@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="en">
+<html lang="en" class="band">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -67,9 +67,11 @@ a{color:var(--accent)}
 h2.label{margin:0 0 .45rem}
 
 /* ---- The masthead. Wordmark and its line are ONE lockup. --------- */
-.wordmark{font-family:var(--display); font-weight:400; text-transform:uppercase;
-  font-size:5.6rem; line-height:1; letter-spacing:.04em; color:var(--olive);
-  margin:0 0 -.06em; display:block}
+:root{--band:var(--olive)}
+.wordmark{margin:0 0 .9rem; display:block; line-height:0}
+.logo{display:block; width:100%; height:auto}
+.band .wordmark{background:var(--band); margin:-2.4rem -2.25rem 1rem; padding:1.6rem 2.25rem 1.5rem}
+
 .mast-line{display:flex; align-items:baseline; justify-content:space-between;
   gap:.35rem 1.5rem; flex-wrap:wrap; margin-top:.5rem; padding-top:.42rem;
   border-top:1px solid var(--rule)}
@@ -173,7 +175,7 @@ figure{margin:0}
 @media (max-width:640px){
   html{font-size:93.75%}
   .sheet{padding:1.6rem 1.15rem 2rem}
-  .wordmark{font-size:3rem}
+  .band .wordmark{margin:-1.6rem -1.15rem .9rem; padding:1.1rem 1.15rem 1rem}
   .pitch-lead{font-size:1.6rem}
   .mast-line{gap:.35rem}
   .hero-media{grid-template-columns:1fr 1fr; grid-template-areas:"main main" "l r"; gap:.6rem}
@@ -205,7 +207,8 @@ figure{margin:0}
   .platter{position:absolute; inset:0; height:11in; overflow:hidden}
   .platter .disc-box{width:14in; height:14in; right:-8.2in; bottom:-8.2in}
   .turning{animation:none; transform:rotate(-14deg)}
-  .wordmark{font-size:100pt}
+  .wordmark{margin-bottom:.16in}
+  .band .wordmark{margin:-.4in -.46in .16in; padding:.34in .46in .3in}
   .pitch-lead{font-size:24pt}
   .pitch{max-width:none}
   .shot img{aspect-ratio:16/8.5}
@@ -296,7 +299,7 @@ figure{margin:0}
 <main class="sheet">
 
   <header>
-    <h1 class="wordmark">Miles DiPaola</h1>
+    <h1 class="wordmark"><img class="logo" src="photos/logo-brass.png" alt="Miles DiPaola"></h1>
     <div class="mast-line">
       <p class="label">DJ &#183; Los Angeles <span class="arrow">&#8594;</span> Aruba</p>
       <p class="mast-sub">Based in Los Angeles &#183; available worldwide for destination events and productions.</p>
