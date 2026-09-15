@@ -43,6 +43,7 @@ const PHONE = { name: 'phone', width: 390, height: 844 };
 // by tests/test_ship_safe.py.  A real client's name landing in a label here
 // goes red on the next walk.
 const PAGE_WORDS = new Set([
+  'AM', 'PM',
   'Savvy', 'Sounds', 'Miles', 'Your', 'Open', 'Start', 'Back', 'Show', 'Hide',
   'Press', 'Copy', 'Copied', 'Name', 'Email', 'Date', 'Time', 'Company',
   'Event', 'Who', 'The', 'Everybody', 'Leave', 'It', 'No', 'Nothing', 'None',
@@ -455,7 +456,7 @@ async function main() {
     await page.size(PHONE);
     await page.goto(`${base}/dj/#/e/${northstar.event_id}`);
     await settled(page, PHONE);
-    await page.waitFor('document.body.textContent.includes("20:15")', 'the settled time on the phone');
+    await page.waitFor('document.body.textContent.includes("8:15 PM")', 'the settled time on the phone');
     await noSidewaysScroll(page, PHONE);
     await page.shot('phone-after-settling');
 
@@ -567,25 +568,39 @@ async function eventReadingChecks(page, event, want) {
   const text = await page.read(WORDS_PROBE);
 
   // the planner's proposal, both values, and who asked
-  mark(text.includes('20:00') && text.includes('20:15'),
-    `${want.name}: the proposal shows both times — 20:00 as it stands, 20:15 asked for`);
+  mark(text.includes('8:00 PM') && text.includes('8:15 PM'),
+    `${want.name}: the proposal shows both times — 8:00 PM as it stands, 8:15 PM asked for`);
   mark(text.includes('Jules'), `${want.name}: the person who asked is named on the screen`);
   const buttons = await page.read(`Array.from(document.querySelectorAll('button')).map((b) => b.textContent.trim())`);
-  mark(buttons.some((words) => words === 'Take Jules’s 20:15'),
+  mark(buttons.some((words) => words === 'Take Jules’s 8:15 PM'),
     `${want.name}: the button says what it will do — "${buttons.find((w) => w.startsWith('Take')) || 'nothing like it'}"`);
-  mark(buttons.some((words) => words.startsWith('Keep 20:00')),
+  mark(buttons.some((words) => words.startsWith('Keep 8:00 PM')),
     `${want.name}: and the other says the opposite — "${buttons.find((w) => w.startsWith('Keep')) || 'nothing like it'}"`);
   const owner = await page.read(`document.body.textContent.includes('Jules Okafor owns this part of the night')`);
   mark(owner, `${want.name}: the person whose part of the night it is, is named`);
 
   // the night that crosses midnight
-  mark(text.includes('21:30–00:30'), `${want.name}: the dancing reads 21:30–00:30`);
+  mark(text.includes('9:30 PM–12:30 AM'), `${want.name}: the dancing reads 9:30 PM–12:30 AM`);
   const nextDay = await page.read(`Array.from(document.querySelectorAll('.moment')).some((m) =>
-    m.textContent.includes('21:30') && m.textContent.includes('finishes the next day'))`);
+    m.textContent.includes('9:30 PM') && m.textContent.includes('finishes the next day'))`);
   mark(nextDay, `${want.name}: and says it finishes the next day`);
   const threeHours = await page.read(`Array.from(document.querySelectorAll('.moment')).some((m) =>
-    m.textContent.includes('21:30') && m.textContent.includes('3 hrs'))`);
+    m.textContent.includes('9:30 PM') && m.textContent.includes('3 hrs'))`);
   mark(threeHours, `${want.name}: counted as 3 hrs, not minus twenty-one`);
+
+  // "12:30 AM" is not military time; "21:41" is.
+  const twentyFourHour = /(?<![\d:])([01]\d|2[0-3]):[0-5]\d(?!\s?[AP]M)/;
+  mark(twentyFourHour.test('20:15') && twentyFourHour.test('asked on 14 Sept, 21:41 Chicago')
+       && !twentyFourHour.test('12:30 AM') && !twentyFourHour.test('9:30 PM–12:30 AM'),
+       `${want.name}: the 24-hour probe can see a planted time and lets 12:30 AM through`);
+  const timeBlocks = await page.read(`(() => {
+    const block = (title) => Array.from(document.querySelectorAll('section.block'))
+      .find((section) => (section.querySelector('h2') || {}).textContent === title);
+    return { running: block('The running order').textContent,
+             needs: block('Needs you').textContent };
+  })()`);
+  mark(!twentyFourHour.test(timeBlocks.running), `${want.name}: the running order has no 24-hour time`);
+  mark(!twentyFourHour.test(timeBlocks.needs), `${want.name}: the needs-you block has no 24-hour time`);
 
   // the cue and the pronunciation, word for word
   const cue = (event.moments.find((m) => m.moment_id === 'm_awards') || {}).cue_text || '';
@@ -769,12 +784,13 @@ async function proposalChecks(page, eventId, doors) {
   const before = await doors(`/api/events/${eventId}`);
   await page.read(`Array.from(document.querySelectorAll('button'))
     .find((b) => b.textContent.trim().startsWith('Take Jules')).click(); true`);
-  await page.waitFor('document.body.textContent.includes("Taken.")', 'the settling to land');
+  await page.waitFor(`document.body.textContent.includes(
+    'Taken. Awards — start time is now 8:15 PM, was 8:00 PM.')`, 'the settling to land');
   // …and then on the screen having actually been rebuilt with it.  The
   // sentence is said before the repaint; reading the page in between is how a
   // green walk and a red walk differ by milliseconds.
   await page.waitFor(`Array.from(document.querySelectorAll('.moment')).some((m) =>
-    m.textContent.includes('20:15\u201321:00'))`, 'the running order to be rebuilt');
+    m.textContent.includes('8:15 PM\u20139:00 PM'))`, 'the running order to be rebuilt');
   const after = await doors(`/api/events/${eventId}`);
 
   is(after.revision, before.revision + 1, 'taking the proposal moves the revision on by one');
@@ -783,9 +799,9 @@ async function proposalChecks(page, eventId, doors) {
   is(awards.proposal, null, 'and nothing is still being proposed on it');
 
   const onScreen = await page.read(`Array.from(document.querySelectorAll('.moment')).map((m) => m.textContent).join(' | ')`);
-  mark(/20:15–21:00/.test(onScreen), `the running order shows the new time — ${(onScreen.match(/20:15[^ ]*/) || [''])[0]}`);
+  mark(/8:15 PM–9:00 PM/.test(onScreen), `the running order shows the new time — ${(onScreen.match(/8:15 PM–9:00 PM/) || [''])[0]}`);
   const flagged = await page.read(`Array.from(document.querySelectorAll('.moment')).some((m) =>
-    m.textContent.includes('20:15') && m.textContent.includes('check this cue'))`);
+    m.textContent.includes('8:15 PM') && m.textContent.includes('check this cue'))`);
   mark(flagged, 'the cue underneath it is flagged to be checked again');
 
   const born = after.open_items.filter((item) => item.origin === 'rule:time-change' && !item.resolved);

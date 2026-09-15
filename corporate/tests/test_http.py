@@ -1,5 +1,8 @@
 """The real doors, over real HTTP, on a private port with a private store."""
 
+import csv
+import io
+
 from .helpers import ServerCase
 
 
@@ -380,8 +383,26 @@ class Doors(ServerCase):
     def test_the_day_sheet_says_when_a_block_runs_into_the_next_day(self):
         code, sheet = self.call("/api/events/%s/daysheet" % self.event_id, token=self.dj, raw=True)
         self.assertEqual(code, 200)
-        self.assertIn("21:30–00:30 (into the next day)", sheet)
-        self.assertNotIn("18:00–19:00 (into", sheet)
+        self.assertIn("9:30 PM–12:30 AM (into the next day)", sheet)
+        key_times = sheet.split("<h2>Key times</h2>", 1)[1].split("</table>", 1)[0]
+        military = r"(?<![\d:])([01]\d|2[0-3]):[0-5]\d(?!\s?[AP]M)"
+        self.assertRegex("hard stop 21:41", military)          # the probe has eyes
+        self.assertNotRegex("12:30 AM", military)              # and is not fooled by half past midnight
+        self.assertNotRegex(key_times, military)
+
+        code, exported = self.call("/api/events/%s/daysheet.csv" % self.event_id,
+                                   token=self.dj, raw=True)
+        self.assertEqual(code, 200)
+        rows = iter(csv.reader(io.StringIO(exported)))
+        for row in rows:
+            if row and row[0] == "Time":
+                break
+        time_cells = []
+        for row in rows:
+            if not row:
+                break
+            time_cells.append(row[0])
+        self.assertNotRegex(" ".join(time_cells), military)
 
     def test_a_cell_that_would_run_as_a_formula_leaves_behind_a_quote(self):
         self.call("/api/events/%s/save" % self.event_id, token=self.token["planner"],

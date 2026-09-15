@@ -227,10 +227,14 @@
     var when = new Date(iso);
     if (isNaN(when.getTime())) return String(iso);
     try {
-      return new Intl.DateTimeFormat('en-GB', {
-        timeZone: tz || undefined, day: 'numeric', month: 'short',
-        hour: '2-digit', minute: '2-digit', hour12: false
+      var day = new Intl.DateTimeFormat('en-GB', {
+        timeZone: tz || undefined, day: 'numeric', month: 'short'
       }).format(when);
+      var parts = {};
+      new Intl.DateTimeFormat('en-GB', {
+        timeZone: tz || undefined, hour: '2-digit', minute: '2-digit', hour12: false
+      }).formatToParts(when).forEach(function (part) { parts[part.type] = part.value; });
+      return day + ', ' + clock((parts.hour === '24' ? '00' : parts.hour) + ':' + parts.minute);
     } catch (no) {
       return when.toISOString().slice(0, 16).replace('T', ' ');
     }
@@ -245,6 +249,20 @@
     return String(value);
   }
 
+  function clock(hhmm) {
+    var bits = String(hhmm).split(':');
+    var hour = Number(bits[0]);
+    if (bits.length < 2 || isNaN(hour)) return String(hhmm);
+    var suffix = hour < 12 ? 'AM' : 'PM';
+    var shown = hour % 12;
+    return (shown === 0 ? 12 : shown) + ':' + bits[1] + ' ' + suffix;
+  }
+
+  function fieldValue(field, value) {
+    if (value === null || value === undefined) return '';
+    return /\.(start|end)$/.test(String(field || '')) ? clock(value) : asWords(value);
+  }
+
   function changeWords(line, event) {
     // The practice events are loaded rather than filled in, and the word the
     // brain writes for that is not one he should ever read.
@@ -253,8 +271,8 @@
     }
     return {
       what: fieldWords(event, line.field),
-      before: shorten(sideWords(line.before), 60),
-      after: shorten(sideWords(line.after), 60)
+      before: shorten(fieldValue(line.field, line.before), 60),
+      after: shorten(fieldValue(line.field, line.after), 60)
     };
   }
 
@@ -741,7 +759,8 @@
         if (attr === 'by' || attr === 'at' || attr === 'note') return;
         out.push({
           field: 'moments.' + moment.moment_id + '.' + attr,
-          now: asWords(moment[attr]), asked: asWords(proposal[attr]),
+          now: fieldValue('moments.' + moment.moment_id + '.' + attr, moment[attr]),
+          asked: fieldValue('moments.' + moment.moment_id + '.' + attr, proposal[attr]),
           by: proposal.by, at: proposal.at
         });
       });
@@ -822,8 +841,8 @@
       ].concat(wantsDecision.map(function (line) {
         return el('p', {}, [
           document.createTextNode(fieldWords(event, line.field) + ': '),
-          el('span', { class: 'was', text: shorten(sideWords(line.before), 40) + ' → ' }),
-          document.createTextNode(shorten(sideWords(line.after), 40)),
+          el('span', { class: 'was', text: shorten(fieldValue(line.field, line.before), 40) + ' → ' }),
+          document.createTextNode(shorten(fieldValue(line.field, line.after), 40)),
           el('span', { class: 'quiet', text: ' · ' + firstName(nameOf(event, line.actor)) +
             ', ' + whenWords(line.at, event.tz) })
         ]);
@@ -929,8 +948,8 @@
 
     var rows = moments.map(function (moment) {
       var crosses = moment.start && moment.end && moment.end < moment.start;
-      var when = (moment.start || '')
-        + (moment.end && moment.end !== moment.start ? '–' + moment.end : '');
+      var when = clock(moment.start || '')
+        + (moment.end && moment.end !== moment.start ? '–' + clock(moment.end) : '');
       var minutes = moment.start && moment.end
         ? ((Number(moment.end.split(':')[0]) * 60 + Number(moment.end.split(':')[1]))
            - (Number(moment.start.split(':')[0]) * 60 + Number(moment.start.split(':')[1])) + 1440) % 1440
@@ -1199,7 +1218,7 @@
         return say(why(answer), true);
       }
       // Say the numbers.  "is now what they asked for" cannot be checked by a
-      // man holding a microphone; "is now 20:15, was 20:00" can.
+      // man holding a microphone; "is now 8:15 PM, was 8:00 PM" can.
       say(take === 'proposal'
         ? 'Taken. ' + fieldWords(event, field) + ' is now ' + (both.asked || '—')
           + ', was ' + (both.now || '—') + '.'

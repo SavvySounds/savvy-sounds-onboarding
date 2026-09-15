@@ -62,6 +62,20 @@ def hhmm_to_min(value):
     return int(hh) * 60 + int(mm)
 
 
+def clock(hhmm):
+    """Show a stored wall-clock time the way Miles reads it."""
+    bits = str(hhmm).split(":")
+    try:
+        hour = int(bits[0])
+    except (ValueError, IndexError):
+        return str(hhmm)
+    if len(bits) < 2:
+        return str(hhmm)
+    suffix = "AM" if hour < 12 else "PM"
+    shown = hour % 12
+    return "%d:%s %s" % (12 if shown == 0 else shown, bits[1], suffix)
+
+
 def ymd_to_ord(value):
     y, m, d = str(value).split("-")
     return _date(int(y), int(m), int(d)).toordinal()

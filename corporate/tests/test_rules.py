@@ -12,6 +12,16 @@ import rules
 QUESTIONS = json.loads((CORPORATE / "questions.json").read_text())["questions"]
 
 
+class Clock(unittest.TestCase):
+    def test_every_stored_time_is_said_the_way_miles_reads_it(self):
+        self.assertEqual({value: rules.clock(value) for value in
+                          ("00:00", "00:30", "12:00", "12:05", "20:15", "09:07", "garbage")},
+                         {"00:00": "12:00 AM", "00:30": "12:30 AM",
+                          "12:00": "12:00 PM", "12:05": "12:05 PM",
+                          "20:15": "8:15 PM", "09:07": "9:07 AM",
+                          "garbage": "garbage"})
+
+
 class QuestionLabels(unittest.TestCase):
     def test_clock_and_moment_choices_have_plain_labels(self):
         questions = {q["id"]: q for q in QUESTIONS}

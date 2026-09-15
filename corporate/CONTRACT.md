@@ -145,6 +145,8 @@ Time: `date` is `YYYY-MM-DD`, `start`/`end` are `HH:MM` wall-clock in the
 event's `tz`. A moment that crosses midnight has an `end` earlier than
 `start` and is understood as ending the next day. The day sheet prints in the
 event's zone and, when it differs from the Mac's, says so in one line.
+Times are stored as `HH:MM` and shown as `h:MM AM/PM` by `clock()` in
+`client.js`, `dj.js`, and `rules.py`.
 
 ## 4. The change log (`data/changes/<event_id>.jsonl`, one JSON object per line)
 

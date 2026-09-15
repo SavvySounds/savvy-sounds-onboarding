@@ -53,8 +53,8 @@
     "planner_name": "Jules Okafor",
     "production_contact": "Sam Reyes, 555-0133",
     "mic_needs": ["Handheld", "Podium", "An MC or host"],
-    "access_constraints": "Loading dock off the service road, 14:00 to 16:00 only. Badge at the desk.",
-    "sound_constraints": "Hard stop at 00:30. House engineer runs the room system."
+    "access_constraints": "Loading dock off the service road, 2 PM to 4 PM only. Badge at the desk.",
+    "sound_constraints": "Hard stop at 12:30 AM. House engineer runs the room system."
   },
   "unknown": ["awards_recipients", "dancing_closer"],
   "miles": ["dancing_opener"],

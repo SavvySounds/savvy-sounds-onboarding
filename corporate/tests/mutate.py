@@ -36,6 +36,13 @@ SANDBOX_PORT = os.environ.get("CORP_MUTATE_PORT", "8792")
 
 # file, what to break, what to put there instead, and the check that must notice.
 NEEDLES = [
+    ("rules.py",
+     '    suffix = "AM" if hour < 12 else "PM"',
+     '    suffix = "AM" if hour < 12 else "AM"',
+     "corporate.tests.test_rules.Clock."
+     "test_every_stored_time_is_said_the_way_miles_reads_it",
+     "afternoon and evening times lose their PM words"),
+
     # --- store.py: the one writer -----------------------------------------
     ("store.py",
      'def _safe(event_id):\n'

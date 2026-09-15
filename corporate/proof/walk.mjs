@@ -179,7 +179,7 @@ async function openPlanner(width, token, eventId, change) {
     } else {
       await clickWords(page, 'Review answers');
       const text = await page.evaluate("document.getElementById('main').innerText");
-      check(`planner view at ${width}px reads the new time`, text.includes('8:15 PM') || text.includes('20:15'), '8:15 PM');
+      check(`planner view at ${width}px reads the new time`, text.includes('8:15 PM'), '8:15 PM');
     }
     await page.shot(join(FRAMES, `gate-planner-${width}.png`));
     const revision = (await door(token, `/api/events/${eventId}`)).data.revision;
@@ -209,15 +209,15 @@ async function openMiles(width, pass, eventId, resolveProposal) {
     await page.waitFor("document.querySelectorAll('section.block').length > 3", { what: 'the event view' });
     const shown = await page.evaluate('document.body.innerText');
     check(`Miles sees both times and Jules at ${width}px`,
-          shown.includes('20:00') && shown.includes('20:15') && shown.includes('Jules'),
-          '20:00 / 20:15 / Jules');
+          shown.includes('8:00 PM') && shown.includes('8:15 PM') && shown.includes('Jules'),
+          '8:00 PM / 8:15 PM / Jules');
     if (resolveProposal) {
       await clickWords(page, 'Take Jules', true);
       await page.waitFor("document.body.innerText.includes('Taken.')", { what: 'the proposal receipt' });
-      await page.waitFor("document.body.innerText.includes('20:15–21:00')", { what: 'the settled running order' });
+      await page.waitFor("document.body.innerText.includes('8:15 PM–9:00 PM')", { what: 'the settled running order' });
       const event = (await door(pass, `/api/events/${eventId}`)).data;
       const awards = event.moments.find((moment) => moment.moment_id === 'm_awards');
-      check('Miles took Jules’s 20:15', awards.start === '20:15' && awards.proposal === null,
+      check('Miles took Jules’s 8:15 PM', awards.start === '20:15' && awards.proposal === null,
             `revision ${event.revision}, ${awards.start}`);
     }
     await page.shot(join(FRAMES, `gate-miles-${width}.png`));
@@ -241,7 +241,7 @@ async function approverAndExports(token, pass, eventId) {
     await page.waitFor("document.body.innerText.toLowerCase().includes('your event brief')", { what: 'Theo’s brief' });
     const brief = (await door(token, `/api/events/${eventId}/brief`)).data;
     const shown = await page.evaluate('document.body.innerText');
-    check('Theo’s brief carries 20:15', shown.includes('8:15 PM') || shown.includes('20:15'), `8:15 PM, revision ${brief.header.revision}`);
+    check('Theo’s brief carries 8:15 PM', shown.includes('8:15 PM'), `8:15 PM, revision ${brief.header.revision}`);
     check('Theo’s brief names questions owned by his role',
           brief.open_items.length > 0 && brief.open_items.every((item) => item.owner === 'approver'),
           `${brief.open_items.length} approver questions`);
@@ -252,9 +252,9 @@ async function approverAndExports(token, pass, eventId) {
   const sheet = await door(pass, `/api/events/${eventId}/daysheet`, null, true);
   const csv = await door(pass, `/api/events/${eventId}/daysheet.csv`, null, true);
   check('day sheet matches the event revision and time',
-        sheet.status === 200 && sheet.data.includes(`revision ${event.revision}`) && sheet.data.includes('20:15'),
-        `revision ${event.revision}, 20:15`);
-  check('day sheet says the dancing runs into the next day', sheet.data.includes('21:30–00:30 (into the next day)'), '21:30–00:30 (into the next day)');
+        sheet.status === 200 && sheet.data.includes(`revision ${event.revision}`) && sheet.data.includes('8:15 PM'),
+        `revision ${event.revision}, 8:15 PM`);
+  check('day sheet says the dancing runs into the next day', sheet.data.includes('9:30 PM–12:30 AM (into the next day)'), '9:30 PM–12:30 AM (into the next day)');
   check('CSV has no formula-starting cell', csv.status === 200 && !unsafeCsvCell(csv.data), '0 unsafe cells');
   return event.revision;
 }

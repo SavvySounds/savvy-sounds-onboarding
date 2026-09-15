@@ -15,6 +15,7 @@ import io
 from datetime import datetime, timezone
 
 import rules
+from rules import clock
 
 FORMULA_STARTS = ("=", "+", "-", "@", "\t", "\r")
 
@@ -74,10 +75,11 @@ def _mac_zone():
 def _times(event):
     rows = []
     for moment in rules.placed(event.get("moments") or []):
-        when = moment.get("start") or ""
-        if moment.get("end"):
-            when += "–" + moment["end"]
-            if moment["end"] < when[:5]:          # ends before it starts = the next day
+        start = moment.get("start") or ""
+        when = clock(start)
+        if moment.get("end") and moment["end"] != start:
+            when += "–" + clock(moment["end"])
+            if moment["end"] < start:              # ends before it starts = the next day
                 when += " (into the next day)"
         rows.append({
             "moment_id": moment["moment_id"],

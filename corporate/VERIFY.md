@@ -211,7 +211,7 @@ afterwards.
 
     python3 corporate/tests/mutate.py
 
-Expect the last line to read **33 of 33 caught**, above a table naming each
+Expect the last line to read **35 of 35 caught**, above a table naming each
 thing that was broken and the check that noticed.
 
 It works on a fresh copy of this folder in a throwaway folder it makes for
@@ -238,10 +238,10 @@ Narrow it while working on one file:
 
     corporate/run-all.sh
 
-The checks (128), then the breaking-on-purpose (34 needles, every one caught),
+The checks (129), then the breaking-on-purpose (35 needles, every one caught),
 then `corporate/proof/walk.mjs`: the client walk and Miles's walk against one
 shared private server, then the Stage 1 loop itself — the planner moves the
-awards start 20:00 → 20:15 on the real page, Miles sees both times with Jules
+awards start 8:00 PM → 8:15 PM on the real page, Miles sees both times with Jules
 named and takes it, the approver's brief, Miles's view and the day sheet agree
 on one revision, the sheet marks the dancing block "into the next day", the
 CSV has no formula cell, and the networking event submits on a phone and shows
@@ -251,8 +251,11 @@ Takes about ten minutes. `CORP_GATE_ONLY=1 node corporate/proof/walk.mjs`
 reruns just the loop while fixing it (about two minutes).
 
 The day sheet prints a block that ends before it starts as
-`21:30–00:30 (into the next day)` — pinned by
+`9:30 PM–12:30 AM (into the next day)` — pinned by
 `test_the_day_sheet_says_when_a_block_runs_into_the_next_day`.
+
+Every time in the day sheet and its CSV is shown with AM or PM. The one Python
+rule lives in `rules.py` as `clock()` and `daysheet.py` imports it.
 
 ---
 
@@ -462,6 +465,8 @@ is gone; open it again and it asks once more.
 What he sees, in this order: every booking with the one that needs him at the
 top; inside a booking, what needs him, what is waiting on each person by name,
 the running order, what changed, the brief, the day sheet, and his own notes.
+Every time on this page is shown with AM or PM; its one JavaScript spelling is
+`clock()` in `dj/dj.js`.
 
 ### The walk that proves it
 
@@ -474,7 +479,7 @@ prints one line per reading with the number it measured. Nothing pops up,
 nothing makes a sound, and it kills its own server and its own Chrome before it
 prints the last line.
 
-Expect the last line to read **91 of 91 readings passed**, and pictures of the
+Expect the last line to read **94 of 94 readings passed**, and pictures of the
 real screen in `corporate/proof/frames/` (not committed).
 
 What it measures, and what it read on 2026-09-14:
@@ -484,11 +489,11 @@ What it measures, and what it read on 2026-09-14:
 | the window it thinks it is in | 390 and 1440 wide, and the page visible both times |
 | a wrong pass | shows the door's own words, and never reaches the address bar |
 | the three counts on the overview | equal to the numbers the door answers, every event, both widths |
-| the planner's proposed time | 20:00 and 20:15 both on screen, Jules named, "Take Jules's 20:15" / "Keep 20:00" |
-| taking it | revision moves 3 → 4, the running order shows 20:15–21:00, the cue under it is flagged, 2 new questions appear under the people who owe them |
+| the planner's proposed time | 8:00 PM and 8:15 PM both on screen, Jules named, "Take Jules's 8:15 PM" / "Keep 8:00 PM" |
+| taking it | revision moves 3 → 4, the running order shows 8:15 PM–9:00 PM, the cue under it is flagged, 2 new questions appear under the people who owe them |
 | marking it as looked at | "changes since you last looked" goes to 0, one client save later it is 1 |
 | his own question | answered from the page, off the list, and what he wrote is what was kept |
-| the dancing | 21:30–00:30, "finishes the next day", counted as 3 hrs |
+| the dancing | 9:30 PM–12:30 AM, "finishes the next day", counted as 3 hrs |
 | the day sheet | opens in its own tab and carries the same revision as the view (3), says it is a snapshot, and does not carry his private note |
 | sideways scroll | none: 390px of page in a 390px window, 1440 in 1440 |
 | the keyboard | 18 stops at 390 and 19 at 1440, every one of them with a real ring, none under 44px tall |
@@ -566,8 +571,8 @@ and a mechanical one that measured the live page in a browser.
 | Found | Changed |
 |---|---|
 | The line above the two buttons said the planner "decides this one", and then the buttons let Miles decide it. A two-second hesitation at the worst moment. | It now says Jules "owns this part of the night". The buttons are his either way. |
-| "Taken. Awards — start time is now what they asked for." cannot be checked by a man holding a microphone. | "Taken. Awards — start time is now 20:15, was 20:00." |
-| "Take Jules's 20:15" and "Keep 20:00" were identical twins 10px apart on a phone, with no undo behind either. | Only the one that changes something is a filled button. |
+| "Taken. Awards — start time is now what they asked for." cannot be checked by a man holding a microphone. | "Taken. Awards — start time is now 8:15 PM, was 8:00 PM." |
+| "Take Jules's 8:15 PM" and "Keep 8:00 PM" were identical twins 10px apart on a phone, with no undo behind either. | Only the one that changes something is a filled button. |
 | The cue he has to hit live, and the name he has to say, were the quietest things on the page — body-sized words on a background the same colour as an empty box. | Both are bigger, and "say it like this" sits on its own gold ground. The client's own words on that page: a wrong name is unrecoverable. |
 | Seven jump buttons stood between him and the thing that needed him, eating a sixth of a phone screen before he read a word. | The first block comes first; the jump bar sits under it. |
 | "37 changes since you last looked", and the first thirty-five were the form arriving in one second. | They fold into one line: "35 answers arrived together", with the names of the first six. The event page went from 13,000px to 8,700px on a phone. |
@@ -577,7 +582,7 @@ and a mechanical one that measured the live page in a browser.
 | A prose line ran 122 characters at a desk. | Prose stops at 68 characters. |
 | "The page and the server disagree about where they are." | "That did not reach your Mac the way it had to. Reload the page." |
 | A change line printed the practice fixture's own word, "fixture loaded". | "This practice booking was loaded." |
-| A moment with no length printed as "00:30–00:30". | It prints one time. |
+| A moment with no length printed as "12:30 AM–12:30 AM". | It prints one time. |
 | A pass that stops working mid-session left him on a screen he could not refresh. | Any door answering that the pass is finished takes him back to the one box that fixes it. |
 
 **Found and deliberately kept:**
