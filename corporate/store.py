@@ -142,9 +142,11 @@ def list_events():
     if not folder.exists():
         return []
     out = []
+    # The glob is the whole guard: a half-written file is named with the temp
+    # prefix and never begins "ev_", so nothing here can read one.  A second
+    # check on the name would be a twin covering for this one, and a twin that
+    # can be broken alone while its partner keeps the test green is a hole.
     for path in sorted(folder.glob("ev_*.json")):
-        if path.name.startswith(TEMP_PREFIX):
-            continue
         record = _read_json(path)
         if record:
             out.append(record)

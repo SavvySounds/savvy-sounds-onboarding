@@ -221,3 +221,10 @@ trick failing, because it assumes the block sits in a centred column. Then:
 back to 0. If it does not come back, the part that measures the real offset
 has stopped working and the page will hang off the side of any cell that is
 not centred.
+
+## Corporate onboarding — see corporate/VERIFY.md
+
+Corporate bookings have their own folder and their own proof recipe:
+`corporate/VERIFY.md`. Start there for the form, the private links, the day
+sheet and how to prove any of it still works. Nothing in that folder touches
+the wedding form, the couple's page, the Aruba sheet or the quality-check page.
