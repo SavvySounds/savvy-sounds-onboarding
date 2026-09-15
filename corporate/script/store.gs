@@ -4,6 +4,13 @@ var STORE_EVENT_ID = /^ev_[0-9a-f]{10}$/;
 var STORE_TOKEN = /^[0-9a-f]{32}$/;
 var STORE_ACCESS_FILE = "access.json";
 
+function ensure_folder(name) {
+  // The one place a folder is made or found; setup() asks here so no other
+  // file ever names Drive.
+  var folders = DriveApp.getFoldersByName(name);
+  return folders.hasNext() ? folders.next() : DriveApp.createFolder(name);
+}
+
 function root() {
   var id = PropertiesService.getScriptProperties().getProperty("FOLDER_ID");
   if (!id) throw new Error("Run setup first.");

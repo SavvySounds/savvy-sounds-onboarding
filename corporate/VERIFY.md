@@ -7,230 +7,135 @@ quality-check page are exactly as they were.
 Run every command from the folder one level up from this one (the top of this
 working copy). Nothing here opens a window, plays a sound or takes the mouse.
 
-**What is finished:** the part that remembers — the questions, the saving, the
-private links, the rules that turn an answer into a job, and the printable day
-sheet. **What is not:** the two screens. They are one placeholder page each
-that says "Screen coming", written by the crew after this one. The doors behind
-them are real and complete.
+**What is finished:** the whole thing, as a proven local preview — the
+questions, the saving, the private links, the rules that turn an answer into a
+job, the printable day sheet, the client's page and Miles's page — and, since
+09-14 evening, the shape it takes when it goes live: the pages on the free
+GitHub Pages home, the answers in Miles's Google Drive behind a Google Apps
+Script that IS the brain. The script is `corporate/script/*.gs`; the same file
+runs on this Mac in node as its own stand-in, so every check below exercises
+the real code, not a copy of it.
 
-**The one thing still left to Miles:** this runs on his own Mac. For a client
-to reach it from their phone it has to live somewhere they can get to. That is
-a decision, not a build step, and nothing here pretends otherwise.
+**What is not:** nothing has been published. The script has not been pasted
+into Google, the address is not on the domain, the one line in `home.js` is a
+placeholder. "Going live" at the bottom is the exact set of clicks; they are
+Miles's.
 
 ---
 
 ## Look at it working (two minutes)
 
-    python3 corporate/seed.py
-    python3 corporate/server.py
+    node corporate/script/seed.mjs
+    node corporate/script/standin.mjs
 
-The first command empties the practice store and puts two invented events back
-in it — a small networking evening and an awards dinner with dancing past
-midnight. It prints a private link for every person on each event and one for
-Miles's own view. The second opens the door at `http://127.0.0.1:8790/`.
+The first command empties the practice store (`corporate/data/drive/`) and
+puts two invented events back in it — a small networking evening and an awards
+dinner with dancing past midnight. It prints a private link for every person
+on each event and one pass for Miles's own view. The second opens two doors:
+the pages at `http://127.0.0.1:8790/` and a stand-in for Google at
+`http://127.0.0.1:8793/`, deliberately on a different origin so the pages
+reach their home the way they will from the real address.
 
-Stop the server with control-C.
+Stop it with control-C.
 
-Expect: six private links, one for Miles, and two lines like
+Expect: six private links ending in `/corporate/client/#<32 characters>`, a
+line "Miles's own view: …/corporate/dj/", his pass, and two lines like
 "Waiting on Theo: 8 open questions."
 
 ---
 
-## The questions (`questions.json`)
+## The script (`corporate/script/`)
 
-This is the form's whole vocabulary: six sections, 52 questions, and for each
-one who owns the answer, what kind of answer it is, and whether it offers
-"Miles to suggest" as well as "Not sure yet".
+| File | What it is |
+|---|---|
+| `rules.gs` | the brain with no disk: validate, who owns what, merge and conflict, effects, next action, `clock()` |
+| `store.gs` | the ONE writer: the event files, the history, the links, the receipts, the revision, the lock |
+| `doors.gs` | `doPost` — every door of `CONTRACT.md` §6 behind one address — plus `setup()` and `doGet` |
+| `daysheet.gs` | the day sheet and its spreadsheet |
+| `load.mjs` | node only: runs the `.gs` files in one shared scope with Google's Drive, lock, properties and output services stood in over a folder on disk |
+| `standin.mjs` | node only: serves the pages and answers the script's address the way Google does (a redirect to a one-shot answer) |
+| `seed.mjs`, `bundle.mjs` | the practice events; the one file to paste into Google |
 
-    python3 -c "import json; q=json.load(open('corporate/questions.json')); \
-      print(len(q['questions']),'questions'); print(q['sections'])"
+Every function keeps the name it had in the Python it replaced, so a check or
+a deliberate break written for one still names the other.
 
-Expect: `52 questions` and the six section names in order.
+    node corporate/script/bundle.mjs | head -3
+    node corporate/script/bundle.mjs | wc -c
 
-Clean versions are ON before anybody touches the form:
-
-    python3 -c "import json; q=json.load(open('corporate/questions.json')); \
-      print([x['default'] for x in q['questions'] if x['id']=='clean_versions'])"
-
-Expect: `['clean']`.
-
----
-
-## The store — one writer, and only one (`store.py`)
-
-Everything that gets remembered is written by this one file and nothing else.
-A check reads the other files' source and fails if any of them names the store
-folder or puts bytes on the disk itself.
-
-    python3 -m unittest corporate.tests.test_one_writer -v
-
-Expect: 5 checks green, including one that poisons a copy of a clean file and
-watches the check notice — so a green here is a green that has been seen to
-go red.
-
-### Prove a broken write is survived
-
-Every save writes to a temporary file first, pushes it all the way down to the
-disk, then renames it over the real one in a single step. Nothing ever reads a
-temporary file, so a save cut off half way leaves the last complete answer
-standing.
-
-    python3 -m unittest corporate.tests.test_store.BrokenWrite -v
-
-That check plants a half-written file beside a good event, reads the event back
-and gets the good one, then saves on top of it and reads that back too.
-
-A crash between the event write and the history write can leave the newest revision without its history line; `previous` on the answer still carries the old value.
-
-To watch it fail if that ever breaks, the mutation runner below turns the
-"only read the real files" line into "read everything" — and the check goes red.
+Expect the first line `// ---- daysheet.gs ----` and about 88,000 characters,
+all of them plain ASCII (the bundler refuses otherwise — a paste through the
+clipboard must not change a byte).
 
 ---
 
-## The rules — the part with no disk and no server (`rules.py`)
+## The checks (`corporate/tests/*.test.mjs`)
 
-Who owns which decision, what happens when two people edit at once, how long
-the music has to cover, and what a change sets off.
+    node --test corporate/tests/*.test.mjs
 
-    python3 -m unittest corporate.tests.test_rules -v
+One file per piece of the script, one `describe` per subject, every check
+named in words. Expect `pass 111`, `fail 0`, `skipped 0` in well under two
+seconds. Among them:
 
-Expect: 37 checks green. The ones worth knowing by name:
-
-- dancing from 21:30 to 00:30 counts as **180 minutes**, and midnight is not a
-  hole in the night.
-- switching the awards on asks **exactly five** questions and no more: the
-  recipients' names and how to say them, the walk-on music, the exact words
-  that start and stop the music, who introduces whom, and who calls each cue.
-- moving a time flags every cue underneath it and adds two questions: re-confirm
-  the cue, re-check soundcheck and arrival.
-- a song on the must-play list that is also on the do-not-play list asks once,
-  not once per run.
-- a part of the night that gets cancelled goes quiet and stops asking for
-  anything.
-- moving the date keeps the same event and walks every time forward with it.
-- running the whole thing twice adds nothing the second time.
+- `rules.test.mjs` — every rule (while the port was being made, a parity
+  check ran the old Python brain beside it on both practice events and diffed
+  every answer; it went with the Python once the two agreed).
+- `store.test.mjs` — receipts, repeat sends, both values on a clash,
+  proposals, the four states after a round trip, a half-written history
+  line, the last good answer standing after a cut-off write, and the lock:
+  four node processes saving on one event at once land all twenty saves on
+  twenty distinct revisions.
+- `doors.test.mjs`, `private.test.mjs` — every door with the right and the
+  wrong link; Miles's notes and other people's details never reach a client.
+- `standin.test.mjs` — the stand-in on a private port: a foreign `Host` is
+  turned away on both doors, a path cannot climb out, the answer comes
+  through the redirect with the header a browser needs, once.
 
 ### Prove the checks are reading THIS code
 
-The checks are worthless if they are reading something else. Break the brain on
-a copy and watch them go red:
+    cp corporate/script/rules.gs /tmp/rules-kept.gs
+    sed -i '' 's/hour < 12 ? "AM" : "PM"/hour < 12 ? "AM" : "AM"/' corporate/script/rules.gs
+    node --test corporate/tests/rules.test.mjs        # expect fail 2
+    cp /tmp/rules-kept.gs corporate/script/rules.gs
+    node --test corporate/tests/rules.test.mjs        # expect fail 0
 
-    cp corporate/rules.py /tmp/rules-kept.py
-    python3 - <<'EOF'
-    import pathlib
-    p = pathlib.Path("corporate/rules.py")
-    p.write_text(p.read_text().replace(
-        'return {"target_min": target', 'return {"target_min": 0'))
-    EOF
-    python3 -m unittest corporate.tests.test_rules            # expect RED
-    cp /tmp/rules-kept.py corporate/rules.py
-    python3 -m unittest corporate.tests.test_rules            # expect green
+### Prove the lock is doing the work
 
-Do not undo it with git — that eats work nobody meant to lose. Copy the file
-back from where you put it.
+    cp corporate/script/store.gs /tmp/store-kept.gs
+    sed -i '' '/^function save(/,/^}/s/lock.waitLock(30000);//' corporate/script/store.gs
+    node --test corporate/tests/store.test.mjs        # expect fail 1: saves lost
+    cp /tmp/store-kept.gs corporate/script/store.gs
 
 ---
 
-## The doors (`server.py`)
+## One writer, and only one (`test_one_writer.py`)
 
-A local address is not a lock. Another program on this Mac, a browser add-on,
-or a web page that points a made-up name at this Mac can all knock on the door.
-So every request is checked in **one place** before it is sent anywhere:
+    python3 -m unittest corporate.tests.test_one_writer -v
 
-- the address it says it came to has to be this one, or it gets 421;
-- anything that saves and says which page it came from has to say this one, or
-  it gets 403.
-
-    python3 -m unittest corporate.tests.test_http -v
-
-Expect: 30 checks green over real HTTP on port **8791** — never 8790, which is
-the one the preview uses. A busy 8791 makes these checks RED, not skipped: a
-check that cannot look refuses, it never answers "fine".
-
-By hand, with the server running and a private link from `seed.py`:
-
-    T=<paste one of the tokens from seed.py>
-    curl -s -o /dev/null -w '%{http_code}\n' -H "Host: somewhere-else.example.com" \
-      -H "X-Access-Token: $T" http://127.0.0.1:8790/api/me          # expect 421
-    curl -s -o /dev/null -w '%{http_code}\n' -H "X-Access-Token: $T" \
-      http://127.0.0.1:8790/api/me                                   # expect 200
-    curl -s -o /dev/null -w '%{http_code}\n' -X POST \
-      -H "Origin: https://somewhere-else.example.com" \
-      -H "X-Access-Token: $T" -H 'Content-Type: application/json' \
-      -d '{}' http://127.0.0.1:8790/api/events/EV/save               # expect 403
-
----
-
-## Private things stay private (`test_private.py`)
-
-Miles's own notes on an event, and the phone numbers and emails of the other
-people on it, are **removed** from what a client's page is given — not hidden
-with styling, not left in and covered up.
-
-    python3 -m unittest corporate.tests.test_private -v
-
-Expect: 10 checks green. One of them reads the same event twice, once as Miles
-and once as a client, and looks for his note in the words themselves. Another
-(added after the third outside review, 2026-09-14) changes the people list as
-the approver and then reads the change history as the day-of contact: the
-history line for that change must carry everybody's name and role and nobody
-else's email or phone — history is scrubbed the same way the event is.
-
-Where the line is drawn, and why: a client sees their own row in the contact
-list in full and everybody else's with the email and phone emptied. They do see
-the answers their own side typed into the form — that is the form working; they
-have to be able to read back what they wrote before they send it.
-
----
+Reads the source, not memory: among the `.gs` files only `store.gs` may name
+Drive, and among the node files only `load.mjs` (the stand-in's disk under the
+writer) may put bytes on the disk. The check breaks a copy of `doors.gs` on
+purpose and shows it would see it.
 
 ## Nothing real ships (`test_ship_safe.py`)
 
-This folder goes into a public place. Three sweeps:
-
     python3 -m unittest corporate.tests.test_ship_safe -v
 
-1. Every name in the two invented events, and every name on the two screens, is
-   on the short allowlist of people and places that do not exist. The four song
-   lines are pinned exactly.
-2. No file here spells this Mac's home-folder path, or the tail that a throwaway
-   session folder is named with. Both spellings are built from pieces inside the
-   check so the check itself does not contain either of them, and this file
-   describes them in words rather than writing them down.
-3. A couple of real surnames from other work on this Mac must not appear. They
-   are pinned by the first eight characters of a fingerprint, so the names never
-   enter this folder at all — and before the sweep trusts a clean answer it
-   proves its own eyes by finding a name it knows IS here.
-
-To watch sweep 1 work, put a real person's name into one of the invented events
-and run it again — it goes red and says which name and where. Copy the file back
-afterwards.
+Every proper name in the practice events and on both screens is one we
+invented; no file in this folder spells this Mac's home folder or a session
+scratch folder; two real surnames are pinned by fingerprint and must not appear.
 
 ---
 
 ## Breaking it on purpose (`tests/mutate.py`)
 
     python3 corporate/tests/mutate.py
+    python3 corporate/tests/mutate.py store          # one file's breaks only
 
-Expect the last line to read **35 of 35 caught**, above a table naming each
-thing that was broken and the check that noticed.
-
-It works on a fresh copy of this folder in a throwaway folder it makes for
-itself, one break at a time, with stale compiled files switched off. Three
-things it refuses to do:
-
-- If any of its quotes no longer matches the source exactly once, it stops
-  before it starts and says which. A quote that has rotted is a rotted quote,
-  not an untested guard — they want different repairs and never share a heading.
-- If the checks are already red it stops, because a red start scores every
-  break as "caught".
-- Anything that survives is a question about the check, never an excuse to
-  lower it.
-
-Both refusals have been watched happening.
-
-Narrow it while working on one file:
-
-    python3 corporate/tests/mutate.py rules
+Every needle is counted against the source before anything runs (a quote that
+matches nowhere or twice stops the run in words); the unbroken checks run
+first and a red baseline refuses to go on; each break gets a fresh copy of the
+folder in a temp directory the runner owns. Expect `35 of 35 caught.` (13 in the rules, 12 in the writer, 8 in the doors,
+1 in the day sheet, 2 in the stand-in's Host seam).
 
 ---
 
@@ -238,10 +143,10 @@ Narrow it while working on one file:
 
     corporate/run-all.sh
 
-The checks (129), then the breaking-on-purpose (35 needles, every one caught),
-then `corporate/proof/walk.mjs`: the client walk and Miles's walk against one
-shared private server, then the Stage 1 loop itself — the planner moves the
-awards start 8:00 PM → 8:15 PM on the real page, Miles sees both times with Jules
+The two sweeps, then the checks (111), then the breaking-on-purpose, then
+`corporate/proof/walk.mjs`: the client walk and Miles's walk against one
+shared stand-in, then the Stage 1 loop itself — the planner moves the awards
+start 8:00 PM → 8:15 PM on the real page, Miles sees both times with Jules
 named and takes it, the approver's brief, Miles's view and the day sheet agree
 on one revision, the sheet marks the dancing block "into the next day", the
 CSV has no formula cell, and the networking event submits on a phone and shows
@@ -250,12 +155,9 @@ its receipt. Red anywhere and the whole thing exits red.
 Takes about ten minutes. `CORP_GATE_ONLY=1 node corporate/proof/walk.mjs`
 reruns just the loop while fixing it (about two minutes).
 
-The day sheet prints a block that ends before it starts as
-`9:30 PM–12:30 AM (into the next day)` — pinned by
-`test_the_day_sheet_says_when_a_block_runs_into_the_next_day`.
-
-Every time in the day sheet and its CSV is shown with AM or PM. The one Python
-rule lives in `rules.py` as `clock()` and `daysheet.py` imports it.
+Every time a person reads is shown with AM or PM. The one rule lives in
+`rules.gs` as `clock()`; the pages carry their own copy in `client.js` and
+`dj.js`.
 
 ---
 
@@ -270,16 +172,17 @@ written down twice, and a word that file does not hold does not appear.
 
 ### Look at it working
 
-    python3 corporate/seed.py
-    python3 corporate/server.py
+    node corporate/script/seed.mjs
+    node corporate/script/standin.mjs
 
-`seed.py` prints a private link per person. Open one in a browser:
+`seed.mjs` prints a private link per person. Open one in a browser:
 
-    http://127.0.0.1:8790/c/<the 32 characters it printed>
+    http://127.0.0.1:8790/corporate/client/#<the 32 characters it printed>
 
 The link works once as a link: the page takes the pass out of the address bar
 and keeps it for that browser tab only, so the address goes back to
-`http://127.0.0.1:8790/c` and a shoulder-surfed screen shows nothing. A refresh
+`http://127.0.0.1:8790/corporate/client/` and a shoulder-surfed screen shows
+nothing. (Live, the same link starts `https://clients-prep.savvysoundscollective.com`.) A refresh
 still works; a fresh tab does not, which is the point.
 
 To see it the way a client will, make the window 390 wide (Chrome: View >
@@ -422,31 +325,7 @@ review, both reading the real frames. What changed because of them:
   answer beats an arrow-key group, and the walk counts the focus ring on every
   one of them.
 
-### Two things this page could not fix from where it sits
-
-**One check still needs one word changed, by whoever owns `tests/`.**
-`tests/test_http.py` pins the placeholder: it asks the door for a private link
-and looks for the words "Screen coming" on the page that comes back. The real
-page does not say that, so that one check is red until its line reads something
-the real page carries — `self.assertIn("Savvy Sounds", page)` does it. The same
-line sits in `test_miles_page_opens` for the other screen, and will go red the
-same way. Nothing else in the 109 checks is red.
-
-**The names sweep can no longer see this screen.**
-`tests/test_ship_safe.py` reads the words out of `client/*.html` and `dj/*.html`
-only. Every word a client now reads comes out of `client.js` and
-`questions.json` instead, so the sweep walks a shell with four words in it and
-reports clean. The shell's own words were chosen to stay inside its allowlist,
-but the sweep should be pointed at `client/*.js` and `dj/*.js` as well — and its
-list of ordinary capitalised words will have to grow when it is.
-
-### Note for whoever writes `run-all.sh`'s last step
-
-`run-all.sh` looks for `corporate/proof/walk.mjs`. This crew wrote
-`corporate/proof/walk-client.mjs` and the shared Chrome helper
-`corporate/proof/cdp.mjs` (which Miles's screen and the final walk reuse). The
-combined `walk.mjs` that `run-all.sh` names is still to be written, and should
-call both screens' walks.
+---
 
 ## Miles's page
 
@@ -454,10 +333,10 @@ His own view of every corporate booking. Nobody else can open it.
 
 ### How to reach it
 
-    python3 corporate/seed.py
-    python3 corporate/server.py
+    node corporate/script/seed.mjs
+    node corporate/script/standin.mjs
 
-Then open `http://127.0.0.1:8790/dj/` and paste the pass `seed.py` printed
+Then open `http://127.0.0.1:8790/corporate/dj/` and paste the pass `seed.mjs` printed
 ("His pass, for the page to carry"). The pass lives in that browser window and
 nowhere else: not on the disk, not in the address bar. Close the window and it
 is gone; open it again and it asks once more.
@@ -502,7 +381,7 @@ What it measures, and what it read on 2026-09-14:
 | with motion turned down | the screen is byte-for-byte still |
 | the pictures | each one is checked against the window it claims to be of |
 | the words | every name on screen came from the booking or from the short list of words this page says in its own voice |
-| who owns which decision | the three tables in `dj/dj.js` are read out of `rules.py` and compared |
+| who owns which decision | the three tables in `dj/dj.js` are read out of `script/rules.gs` and compared |
 | somebody else's words | nothing on the page turns them into markup |
 
 **This walk is not yet in `corporate/run-all.sh`.** That file runs the checks,
@@ -548,13 +427,14 @@ Four real defects, all on the first run:
 
 ### Marking an event as looked at, by hand
 
-With the server running and the pass from `seed.py` in `$T`, and an event id
-from the list:
+With the stand-in running and the pass from `seed.mjs` in `$T`, and an event
+id from the list (every door is one POST to the home; `-L` follows the
+redirect the way a browser does):
 
-    curl -s -H "X-Access-Token: $T" http://127.0.0.1:8790/api/events \
-      | python3 -c "import json,sys; [print(e['event_id'], e['changed_since_seen'], e['revision']) for e in json.load(sys.stdin)]"
-    curl -s -X POST -H "X-Access-Token: $T" -H 'Content-Type: application/json' \
-      -d '{"event_id":"ev_...","revision":99}' http://127.0.0.1:8790/api/dj/seen
+    H=http://127.0.0.1:8793/macros/s/local/exec
+    curl -s -L -d "{\"door\":\"/api/events\",\"token\":\"$T\"}" $H \
+      | python3 -c "import json,sys; [print(e['event_id'], e['changed_since_seen'], e['revision']) for e in json.load(sys.stdin)['events']]"
+    curl -s -L -d "{\"door\":\"/api/dj/seen\",\"token\":\"$T\",\"body\":{\"event_id\":\"ev_...\",\"revision\":99}}" $H
 
 Expect the door to answer with the event's OWN revision, never 99 — the
 bookmark cannot run ahead of the record, and asking again with a smaller
@@ -610,7 +490,7 @@ what actually reads the screen.
 
 ## What the practice events are for
 
-`corporate/seed.py` empties the practice store and loads two invented events.
+`corporate/script/seed.mjs` empties the practice store and loads two invented events.
 Nothing in them is real.
 
 **Harbor Studio Networking** — a straightforward evening. Arrival, then two and
@@ -623,5 +503,72 @@ There is a pronunciation note that has to be printed word for word. And the
 planner has already proposed moving the awards from 20:00 to 20:15, which is the
 disagreement Miles settles in the walk.
 
-The practice store (`corporate/data/`) is never committed, and `seed.py` refuses
+The practice store (`corporate/data/`) is never committed, and `seed.mjs` refuses
 to empty that folder if it finds anything in it that this tool did not make.
+
+---
+
+## Going live (Miles's hands; nothing here has been pressed yet)
+
+Everything below is the exact set of clicks. Nothing in this folder does any
+of them; the local proof runs against a stand-in of Google on this Mac.
+
+### 1. Put the script into your Google account (about three minutes)
+
+    node corporate/script/bundle.mjs | LANG=en_US.UTF-8 pbcopy
+
+That puts the whole script (one file) on the clipboard. Then, signed into the
+Google account that owns your Drive:
+
+1. Open https://script.google.com and press **New project**.
+2. In the editor, click into the code box, select all (⌘A) and paste (⌘V).
+   Name the project at the top: **Savvy corporate prep**. Press **Save** (⌘S).
+3. In the toolbar, choose the function **setup** in the dropdown and press
+   **Run**. Google asks for permission once (Drive) — allow it for this
+   script. When it finishes, open **Execution log** (bottom) and copy the line
+   `Your pass for the view: …` — that is your pass for your own page. Keep it
+   somewhere private; it is not stored anywhere on GitHub.
+   Running `setup` a second time changes nothing (same folder, same pass).
+4. Press **Deploy → New deployment**. Type: **Web app**. Execute as: **Me**.
+   Who has access: **Anyone**. Press **Deploy**, then copy the **Web app URL**
+   (it ends in `/exec`).
+
+Send that address to Fable. It goes on the one line in `corporate/home.js`.
+Until it is there, both pages say "This page is not connected to its home
+yet" and refuse to pretend.
+
+Expect in your Drive afterwards: one folder **Savvy Sounds - corporate prep**
+holding `access.json`; each booking adds `ev_….json` and `ev_….changes.jsonl`.
+
+### 2. Put the pages on the address (about five minutes, after step 1)
+
+1. The line in `corporate/home.js` is filled in (Fable) and committed; you
+   press the push (that is the live button for the pages).
+2. GitHub → the repo → **Settings → Pages → Custom domain**: type
+   `clients-prep.savvysoundscollective.com`, **Save**. GitHub adds a `CNAME`
+   file to the repo by itself.
+3. Google Domains (your account) → DNS for savvysoundscollective.com → add
+   one record: type **CNAME**, name **clients-prep**, data
+   **savvysounds.github.io.** (with the trailing dot). Save. It can take
+   up to an hour to be seen; the Pages settings page shows a green check when
+   it is, and then **Enforce HTTPS** can be ticked.
+
+**Say this out loud before pressing:** the wedding form lives at the root of
+this same home, so its address ALSO becomes
+`https://clients-prep.savvysoundscollective.com/` — every old link a couple
+holds still lands (GitHub redirects the old address), but the address they see
+changes. The form itself is untouched, byte for byte.
+
+### 3. Prove it is live (Fable, after your clicks)
+
+- `curl -s https://clients-prep.savvysoundscollective.com/corporate/home.js`
+  prints the script address, not the placeholder.
+- A POST to the script address with `{"door":"/api/me","token":"x"}` answers
+  `{"status":403,…}` through the redirect — the home is up and refusing
+  strangers.
+- Your own page at `…/corporate/dj/`, your pass typed in: the list is empty
+  (no bookings yet) and says so. Start a practice booking with the fictional
+  names from `corporate/fixtures/`, open its link on your phone, type one
+  answer, see "Saved · revision 2", and read the same revision on your page.
+  Then revoke that link from your page and confirm the phone says the link
+  has expired.

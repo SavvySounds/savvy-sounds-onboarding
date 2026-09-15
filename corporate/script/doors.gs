@@ -184,8 +184,7 @@ function route(door, who, body) {
 function setup() {
   var properties = PropertiesService.getScriptProperties();
   if (!properties.getProperty("FOLDER_ID")) {
-    var name = "Savvy Sounds - corporate prep", folders = DriveApp.getFoldersByName(name);
-    var folder = folders.hasNext() ? folders.next() : DriveApp.createFolder(name);
+    var folder = ensure_folder("Savvy Sounds - corporate prep");
     properties.setProperty("FOLDER_ID", folder.getId());
   }
   var token = access("dj", {}).token;

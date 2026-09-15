@@ -925,12 +925,12 @@ async function keyboardOnlyChecks(page, base, eventId) {
 
 // ---------------------------------------------- readings that need no browser
 
-function pythonTable(source, name) {
-  const block = source.split(`${name} = {`)[1];
+function gsTable(source, name) {
+  const block = source.split(`const ${name} = {`)[1];
   if (block === undefined) return null;
   const inside = block.split('}')[0];
   const out = {};
-  for (const [, key, value] of inside.matchAll(/"([a-z_]+)"\s*:\s*"([a-z_]+)"/g)) out[key] = value;
+  for (const [, key, value] of inside.matchAll(/([a-z_]+)\s*:\s*"([a-z_]+)"/g)) out[key] = value;
   return out;
 }
 
@@ -944,13 +944,13 @@ function jsTable(source, name) {
 }
 
 function vocabularyPinned() {
-  const rules = readFileSync(join(CORPORATE, 'rules.py'), 'utf8');
+  const rules = readFileSync(join(CORPORATE, 'script', 'rules.gs'), 'utf8');
   const screen = readFileSync(join(CORPORATE, 'dj', 'dj.js'), 'utf8');
   for (const name of ['OWNER_ROLE', 'OWNER_FALLBACK', 'MOMENT_FIELD_OWNER']) {
-    const brain = pythonTable(rules, name);
+    const brain = gsTable(rules, name);
     const page = jsTable(screen, name);
     if (!brain || !page) { mark(false, `${name}: could not be read out of both files`); continue; }
-    atLeast(Object.keys(brain).length, 2, `${name}: read out of rules.py`);
+    atLeast(Object.keys(brain).length, 2, `${name}: read out of rules.gs`);
     is(JSON.stringify(page), JSON.stringify(brain),
       `${name}: the screen says exactly what the brain says — ${Object.keys(brain).length} words`);
   }

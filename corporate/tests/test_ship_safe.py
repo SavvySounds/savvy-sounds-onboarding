@@ -18,8 +18,9 @@ import hashlib
 import json
 import re
 import unittest
+from pathlib import Path
 
-from .helpers import CORPORATE
+CORPORATE = Path(__file__).resolve().parent.parent
 
 FIXTURES = CORPORATE / "fixtures"
 
@@ -43,6 +44,11 @@ SAFE_WORDS = {
     "Pick", "Reload", "Retry", "Review", "SELECT", "Saved", "See", "Sending", "Sent",
     "Something", "Starting", "Starts", "Still", "TEXTAREA", "That’s", "They", "Try",
     "Two", "We", "Write", "X-Access-Token", "York", "You",
+    "All", "Arial", "Asked", "BlinkMacSystemFont", "Cue", "Cues", "Each", "FOLDER",
+    "Helvetica", "ID", "Key", "Load-in", "Miles's", "Minutes", "Music", "Must",
+    "PASTE-THE-SCRIPT-ADDRESS-HERE", "Phone", "Printed", "Re-check", "Re-confirm",
+    "Ready", "Role", "Room", "Run", "Say", "Segoe", "Sources", "Styles", "Tell",
+    "There", "UI", "UTC", "Walk-on",
 }
 
 # The exact song lines the pretend events carry.  Famous records, pinned.
@@ -64,7 +70,7 @@ SCRATCH_ROOT = "/tmp/" + "clau" + "de-"
 # First eight hex of sha256 of two real surnames.  The names are never spelled.
 NEEDLE_HASHES = ("44f93692", "489f5524")
 
-SKIP_FOLDERS = {"__pycache__", "frames"}
+SKIP_FOLDERS = {"__pycache__", "frames", "data"}   # data/ is the runtime store, never shipped
 NAME = re.compile(r"[A-Z][A-Za-z'’-]+")
 WORD = re.compile(r"[a-z]+")
 
@@ -173,7 +179,9 @@ class Fixtures(unittest.TestCase):
             pages = []
             for suffix in ("*.html", "*.js", "*.css"):
                 pages.extend((CORPORATE / folder).glob(suffix))
-            for page in sorted(pages):
+            self.assertTrue(pages, "%s screen files disappeared" % folder)
+            surfaces = pages + list((CORPORATE / "script").glob("*.gs")) + [CORPORATE / "home.js"]
+            for page in sorted(set(surfaces)):
                 words = (screen_words(read(page)) if page.suffix == ".html" else
                          style_words(read(page)) if page.suffix == ".css" else
                          script_words(read(page)))

@@ -1,5 +1,4 @@
 import assert from 'node:assert/strict';
-import {spawnSync} from 'node:child_process';
 import {readFileSync} from 'node:fs';
 import {describe, test} from 'node:test';
 import {load} from '../script/load.mjs';
@@ -383,45 +382,3 @@ function js_answers(name, fixtures) {
   });
 }
 
-const PYTHON_PARITY = String.raw`
-import json, re, sys
-sys.path.insert(0, 'corporate')
-import rules
-questions = json.load(open('corporate/questions.json'))['questions']
-fixtures = json.load(sys.stdin)
-name = sys.argv[1]
-def times(record):
-    return [v for m in record.get('moments', []) for v in (m.get('start'), m.get('end'))
-            if re.match(r'^([01]\d|2[0-3]):[0-5]\d$', str(v))]
-def answer(record):
-    if name == 'clock': return [rules.clock(v) for v in times(record)]
-    if name == 'hhmm_to_min': return [rules.hhmm_to_min(v) for v in times(record)]
-    if name == 'span_min': return [rules.span_min(m) for m in record.get('moments', [])]
-    if name == 'coverage': return rules.coverage(record)
-    if name == 'next_action': return rules.next_action(record)
-    if name == 'validate': return [rules.validate(questions, record, submit) for submit in (False, True)]
-    raise ValueError(name)
-print(json.dumps([answer(record) for record in fixtures], sort_keys=True, separators=(',', ':')))
-`;
-
-describe('Python parity', () => {
-  test('both fixture records match the Python brain', () => {
-    const fixtures = ['harbor-studio.json', 'northstar-awards.json'].map((name) => {
-      const seed = JSON.parse(readFileSync(new URL('fixtures/' + name, CORPORATE), 'utf8'));
-      const answers = Object.fromEntries(Object.entries(seed.answers || {}).map(([qid, value]) =>
-        [qid, answer(value)]));
-      for (const state of ['unknown', 'miles', 'none']) {
-        for (const qid of seed[state] || []) answers[qid] = answer(null, state);
-      }
-      return {...seed, answers, open_items: []};
-    });
-    for (const name of ['clock', 'hhmm_to_min', 'span_min', 'coverage', 'next_action', 'validate']) {
-      const js = JSON.stringify(sorted(js_answers(name, structuredClone(fixtures))));
-      console.log('parity ' + name + ': ' + js);
-      const python = spawnSync('python3', ['-c', PYTHON_PARITY, name], {
-        cwd: new URL('../..', import.meta.url), input: JSON.stringify(fixtures), encoding: 'utf8'});
-      assert.equal(python.status, 0, python.stderr);
-      assert.equal(js, python.stdout.trim());
-    }
-  });
-});

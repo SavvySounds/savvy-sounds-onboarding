@@ -9,7 +9,7 @@
      name, a note — reaches the screen as a text node and never as markup.
      There is no innerHTML in this file, on purpose.
    * the words that decide who owns what are the brain's words.  The three
-     tables below are copied from rules.py, and proof/walk-dj.mjs reads both
+     tables below are copied from rules.gs, and proof/walk-dj.mjs reads both
      files and fails if they ever drift apart.  A screen that invents its own
      vocabulary is how two halves of one tool start answering different
      questions.
@@ -22,7 +22,7 @@
   var room = document.getElementById('room');
   var sayBox = document.getElementById('say');
 
-  // --- the brain's words (pinned against rules.py by the walk) -------------
+  // --- the brain's words (pinned against rules.gs by the walk) -------------
   var OWNER_ROLE = {
     direction: 'approver', running_order: 'planner', production: 'production',
     prep: 'dj', event: 'approver'

@@ -15,7 +15,7 @@ step () {
   echo "=============================================================="
 }
 
-step "1 of 3 — the checks"
+step "1 of 4 — the sweeps"
 if python3 -m unittest discover -s corporate/tests -t .; then
   echo "checks: green"
 else
@@ -23,7 +23,15 @@ else
   FAILED=1
 fi
 
-step "2 of 3 — breaking it on purpose"
+step "2 of 4 — the brain"
+if node --test corporate/tests/*.test.mjs; then
+  echo "brain: green"
+else
+  echo "brain: RED"
+  FAILED=1
+fi
+
+step "3 of 4 — breaking it on purpose"
 if [ "$FAILED" -ne 0 ]; then
   echo "skipped: the checks are red, so every mutation would look caught."
   echo "         fix the checks first."
@@ -36,7 +44,7 @@ else
   fi
 fi
 
-step "3 of 3 — the walk through the real screens"
+step "4 of 4 — the walk through the real screens"
 if node corporate/proof/walk.mjs; then
   echo "walk: green"
 else
