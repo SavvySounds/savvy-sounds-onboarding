@@ -267,9 +267,13 @@ class Handler(BaseHTTPRequestHandler):
         parts = [p for p in path.split("/") if p]
         query = parse_qs(url.query)
 
-        if path == "/c" or (len(parts) == 2 and parts[0] == "c"):
-            if len(parts) == 2 and not _TOKEN.match(parts[1]):
-                return self.send_json(403, {"ok": False, "error": "link-expired"})
+        if path in ("/c", "/c/") or (len(parts) == 2 and parts[0] == "c"):
+            # A dead link (wrong shape, unknown, revoked, run out) never gets the
+            # page itself: it gets one plain sentence, with no script and no data.
+            if len(parts) == 2 and (not _TOKEN.match(parts[1])
+                                    or not store.access("lookup", token=parts[1]).get("ok")):
+                return self.send_bytes(403, (CLIENT_DIR / "expired.html").read_bytes(),
+                                       TYPES[".html"])
             return self.serve_file(CLIENT_DIR, "index.html")
         if parts[:1] == ["client"] and len(parts) > 1:
             return self.serve_file(CLIENT_DIR, "/".join(parts[1:]))

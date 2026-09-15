@@ -36,7 +36,13 @@ ALLOWED_NAMES = {
 SAFE_WORDS = {
     "Arrival", "Dinner", "Dancing", "Closing", "Main", "Atrium", "The",
     "Miles", "Savvy", "Sounds", "Screen", "This", "America", "Chicago",
-    "Los", "Angeles",
+    "Los", "Angeles", "AM", "About", "Add", "Allow", "Anchorage", "Before",
+    "Check", "Content-Type", "Continue", "Denver", "Edit", "Ends", "Everything",
+    "Fetching", "GB", "GET", "Give", "Hello", "Honolulu", "INPUT", "Mac", "New",
+    "Next", "Only", "Opening", "Other", "PM", "POST", "Pacific", "Part", "Phoenix",
+    "Pick", "Reload", "Retry", "Review", "SELECT", "Saved", "See", "Sending", "Sent",
+    "Something", "Starting", "Starts", "Still", "TEXTAREA", "That’s", "They", "Try",
+    "Two", "We", "Write", "X-Access-Token", "York", "You",
 }
 
 # The exact song lines the pretend events carry.  Famous records, pinned.
@@ -110,6 +116,27 @@ def screen_words(text):
     return NAME.findall(text)
 
 
+def script_words(text):
+    text = re.sub(r"/\*.*?\*/", " ", text, flags=re.S)
+    text = re.sub(r"//[^\n]*", " ", text)
+    strings = re.findall(
+        r"'(?:\\.|[^'\\])*'|\"(?:\\.|[^\"\\])*\"|`(?:\\.|[^`\\])*`", text,
+        flags=re.S)
+    return NAME.findall(" ".join(piece[1:-1] for piece in strings))
+
+
+def style_words(text):
+    values = re.findall(r"content\s*:\s*('(?:\\.|[^'\\])*'|\"(?:\\.|[^\"\\])*\")",
+                        text)
+    return NAME.findall(" ".join(piece[1:-1] for piece in values))
+
+
+def pinned_page_words():
+    source = read(CORPORATE / "proof" / "walk-dj.mjs")
+    match = re.search(r"const PAGE_WORDS = new Set\(\[(.*?)\]\);", source, re.S)
+    return set(re.findall(r"'([A-Za-z]+)'", match.group(1))) if match else set()
+
+
 class Fixtures(unittest.TestCase):
     def fixtures(self):
         return [json.loads(p.read_text(encoding="utf-8"))
@@ -139,10 +166,18 @@ class Fixtures(unittest.TestCase):
         self.assertEqual(found, PINNED_SONGS)
 
     def test_the_screens_say_no_names_we_did_not_invent(self):
-        allowed = ALLOWED_NAMES | SAFE_WORDS
+        pinned = pinned_page_words()
+        self.assertGreater(len(pinned), 40, "the screen crew's pinned words disappeared")
+        allowed = ALLOWED_NAMES | SAFE_WORDS | pinned
         for folder in ("client", "dj"):
-            for page in sorted((CORPORATE / folder).glob("*.html")):
-                for token in screen_words(read(page)):
+            pages = []
+            for suffix in ("*.html", "*.js", "*.css"):
+                pages.extend((CORPORATE / folder).glob(suffix))
+            for page in sorted(pages):
+                words = (screen_words(read(page)) if page.suffix == ".html" else
+                         style_words(read(page)) if page.suffix == ".css" else
+                         script_words(read(page)))
+                for token in words:
                     self.assertIn(token, allowed,
                                   "%s in %s is not on the allowlist"
                                   % (token, page.name))

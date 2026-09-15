@@ -11,6 +11,23 @@ import rules
 
 QUESTIONS = json.loads((CORPORATE / "questions.json").read_text())["questions"]
 
+
+class QuestionLabels(unittest.TestCase):
+    def test_clock_and_moment_choices_have_plain_labels(self):
+        questions = {q["id"]: q for q in QUESTIONS}
+        self.assertEqual(questions["moments"]["option_labels"], {
+            "arrival": "Arrival", "networking": "Networking", "dinner": "Dinner",
+            "presentations": "Presentations", "awards": "Awards",
+            "dancing": "Dancing", "closing": "Closing", "custom": "Something else"})
+        self.assertEqual(questions["tz"]["option_labels"], {
+            "America/Los_Angeles": "Los Angeles (Pacific)",
+            "America/Denver": "Denver (Mountain)",
+            "America/Phoenix": "Phoenix (Mountain)",
+            "America/Chicago": "Chicago (Central)",
+            "America/New_York": "New York (Eastern)",
+            "Pacific/Honolulu": "Honolulu (Hawaii)",
+            "Other": "Something else"})
+
 APPROVER = {"person_id": "p_a", "name": "Dana Whitfield", "role": "approver"}
 PLANNER = {"person_id": "p_p", "name": "Jules Okafor", "role": "planner"}
 
@@ -332,6 +349,10 @@ class Effects(unittest.TestCase):
         owners = {i["item_id"]: i["owner"] for i in result["open_items_added"]}
         self.assertEqual(owners["oi_answer_crowd_notes"], "approver")
         self.assertEqual(owners["oi_answer_dancing_opener"], "dj")
+        miles_item = next(i for i in result["open_items_added"]
+                          if i["item_id"] == "oi_answer_dancing_opener")
+        self.assertEqual(miles_item["why"],
+                         "You said you'd suggest this — it's yours to answer.")
 
     def test_answering_it_closes_the_question_again(self):
         items = [{"item_id": "oi_answer_crowd_notes", "question": "q", "why": "w",

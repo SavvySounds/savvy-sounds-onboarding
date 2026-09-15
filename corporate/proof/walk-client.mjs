@@ -351,8 +351,10 @@ async function targetChecks(page, tag) {
 
 async function walk({ fixture, width, height, keepMine }) {
   const tag = `${fixture}-${width}`;
-  const data = await mkdtemp(join(tmpdir(), 'corp-walk-'));
-  const port = await freePort();
+  const shared = process.env.CORP_SHARED_SERVER === '1';
+  const data = shared ? process.env.CORP_DATA : await mkdtemp(join(tmpdir(), 'corp-walk-'));
+  const port = shared ? Number(process.env.CORP_PORT) : await freePort();
+  if (!data || !port) throw new Error('a shared walk needs CORP_DATA and CORP_PORT');
   const base = `http://127.0.0.1:${port}`;
   let server = null;
   let page = null;
@@ -363,7 +365,11 @@ async function walk({ fixture, width, height, keepMine }) {
     if (!wanted) throw new Error(`no practice event called ${fixture}`);
     const approver = wanted.people.find((p) => p.role === 'approver');
     const djPass = events.dj;
-    server = await startServer(port, data);
+    if (!shared) server = await startServer(port, data);
+    else {
+      const ready = await fetch(`${base}/api/me`, { headers: { 'X-Access-Token': 'x' } });
+      if (!ready.status) throw new Error('the shared server did not answer');
+    }
 
     page = await launch({ width, height, scratch: process.env.CORP_WALK_SCRATCH || undefined });
     const world = await page.open(`${base}/c/${approver.token}`);
@@ -548,8 +554,26 @@ async function walk({ fixture, width, height, keepMine }) {
     await sleep(200);
     await gotoSection(page, 2);
     const revisionBeforeOffline = (await door(base, approver.token, `/api/events/${eventId}`)).data.revision;
-    await stopServer(server);
-    server = null;
+    if (shared) {
+      await page.evaluate(`(() => {
+        const live = window.fetch;
+        let cut = false;
+        window.fetch = function (url, options) {
+          if (!cut && String(url).endsWith('/save')) {
+            cut = true;
+            let body = null;
+            try { body = JSON.parse(options.body); } catch (e) {}
+            window.__sent.push({url: String(url), method: 'POST', body: body, status: -1});
+            return Promise.reject(new Error('practice line down'));
+          }
+          return live.apply(this, arguments);
+        };
+        return true;
+      })()`);
+    } else {
+      await stopServer(server);
+      server = null;
+    }
     await writeAnswer(page, 'crowd_notes', 'Typed while the line was down.');
     await waitStatus(page, 'Saved on this device only', 12);
     const offlineWords = await statusLine(page);
@@ -557,7 +581,7 @@ async function walk({ fixture, width, height, keepMine }) {
           offlineWords.includes('Saved on this device only — not yet sent to Savvy Sounds'),
           JSON.stringify(offlineWords.trim()));
 
-    server = await startServer(port, data);
+    if (!shared) server = await startServer(port, data);
     await pressWords(page, 'Retry');
     await waitStatus(page, 'Saved · revision', 15);
     const afterRetry = (await door(base, approver.token, `/api/events/${eventId}`)).data;
@@ -733,7 +757,7 @@ async function walk({ fixture, width, height, keepMine }) {
   } finally {
     if (page) await page.close();
     await stopServer(server);
-    await rm(data, { recursive: true, force: true });
+    if (!shared) await rm(data, { recursive: true, force: true });
   }
 }
 

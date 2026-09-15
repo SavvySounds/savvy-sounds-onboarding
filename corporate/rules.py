@@ -469,7 +469,7 @@ def effects(before, after, questions=()):
                         "effects needs the question list to know who owns %r" % qid)
                 owner = role_for(owner_of(qmap[qid]))
             label = (qmap.get(qid) or {}).get("label") or qid
-            why = ("Miles is to suggest this; it is his to answer."
+            why = ("You said you'd suggest this — it's yours to answer."
                    if state == "miles" else
                    "Left open on the form; the night needs a real answer.")
             offer(_item(item_id, label + " — still open", why, [], owner, "rule:answer-state"))

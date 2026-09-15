@@ -116,6 +116,18 @@ class Saving(StoreCase):
         self.assertEqual(moment["proposal"]["start"], "22:00")
         self.assertEqual(moment["proposal"]["by"], "p_mina")
 
+    def test_a_non_owner_cannot_propose_a_choice_the_form_never_offered(self):
+        code, body = self.store.save(self.event_id, "p_mina", "contact", {
+            "base_revision": self.base, "submission_id": "sub_bad_proposal",
+            "answers": {"clean_versions": {
+                "value": "whatever_they_played", "state": "confirmed"}}})
+        self.assertEqual(code, 422)
+        self.assertEqual(body["error"], "invalid")
+        after = self.store.load_event(self.event_id)
+        self.assertEqual(after["revision"], self.base)
+        self.assertIsNone(after["answers"]["clean_versions"].get("proposal"))
+        self.assertEqual(self.store.changes_since(self.event_id, self.base), [])
+
     def test_the_owner_of_the_running_order_writes_it_outright(self):
         code, body = self.store.save(self.event_id, "p_jules", "planner", {
             "base_revision": self.base, "submission_id": "sub_j2",
@@ -179,6 +191,22 @@ class Saving(StoreCase):
 
 
 class BrokenWrite(StoreCase):
+    def test_a_half_written_last_history_line_does_not_hide_the_good_lines(self):
+        event, _ = self.plant("harbor-studio.json")
+        path = self.store._changes_path(event["event_id"])
+        good = {"revision": 1, "field": "answers.company"}
+        path.write_text(json.dumps(good) + "\n" + '{"revision": 2', encoding="utf-8")
+        self.assertEqual(self.store.read_changes(event["event_id"]), [good])
+
+    def test_a_broken_history_line_in_the_middle_is_refused_in_words(self):
+        event, _ = self.plant("harbor-studio.json")
+        path = self.store._changes_path(event["event_id"])
+        good = json.dumps({"revision": 1, "field": "answers.company"})
+        path.write_text(good + "\n" + '{"revision": 2' + "\n" + good + "\n",
+                        encoding="utf-8")
+        with self.assertRaisesRegex(RuntimeError, "history line 2.*is broken"):
+            self.store.read_changes(event["event_id"])
+
     def test_a_write_cut_off_half_way_leaves_the_last_good_answer_standing(self):
         event, _ = self.plant("harbor-studio.json")
         event_id = event["event_id"]

@@ -80,6 +80,8 @@ standing.
 That check plants a half-written file beside a good event, reads the event back
 and gets the good one, then saves on top of it and reads that back too.
 
+A crash between the event write and the history write can leave the newest revision without its history line; `previous` on the answer still carries the old value.
+
 To watch it fail if that ever breaks, the mutation runner below turns the
 "only read the real files" line into "read everything" — and the check goes red.
 
@@ -205,7 +207,7 @@ afterwards.
 
     python3 corporate/tests/mutate.py
 
-Expect the last line to read **27 of 27 caught**, above a table naming each
+Expect the last line to read **33 of 33 caught**, above a table naming each
 thing that was broken and the check that noticed.
 
 It works on a fresh copy of this folder in a throwaway folder it makes for

@@ -32,6 +32,10 @@ const VK = {
 
 function keyBits(name) {
   if (name === 'Space') return { key: ' ', code: 'Space', windowsVirtualKeyCode: 32, text: ' ' };
+  if (/^[a-z]$/i.test(name)) {
+    const upper = name.toUpperCase();
+    return { key: name, code: 'Key' + upper, windowsVirtualKeyCode: upper.charCodeAt(0) };
+  }
   return { key: name, code: name, windowsVirtualKeyCode: VK[name] || 0 };
 }
 
@@ -254,9 +258,9 @@ export async function launch({ width = 1440, height = 900, scratch } = {}) {
       await sleep(20);
     },
 
-    async key(name, { shift = false } = {}) {
+    async key(name, { shift = false, control = false } = {}) {
       const bits = keyBits(name);
-      const modifiers = shift ? 8 : 0;
+      const modifiers = (shift ? 8 : 0) | (control ? 2 : 0);
       await send('Input.dispatchKeyEvent',
         { type: bits.text ? 'keyDown' : 'rawKeyDown', modifiers, ...bits });
       await send('Input.dispatchKeyEvent', { type: 'keyUp', modifiers, ...bits });

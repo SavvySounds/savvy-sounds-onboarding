@@ -38,6 +38,17 @@ SANDBOX_PORT = os.environ.get("CORP_MUTATE_PORT", "8792")
 NEEDLES = [
     # --- store.py: the one writer -----------------------------------------
     ("store.py",
+     'def _safe(event_id):\n'
+     '    """An event id is minted by us and is never text somebody typed."""\n'
+     '    if not _EVENT_ID.match(str(event_id or "")):',
+     'def _safe(event_id):\n'
+     '    """An event id is minted by us and is never text somebody typed."""\n'
+     '    if False:',
+     "corporate.tests.test_store.Making."
+     "test_a_name_that_tries_to_be_a_path_is_refused_in_words",
+     "a typed name can become a path into the event store"),
+
+    ("store.py",
      "        if submission_id and submission_id in receipts:",
      "        if False and submission_id in receipts:",
      "corporate.tests.test_store.Saving."

@@ -330,14 +330,15 @@ const WORDS_PROBE = `(() => {
 async function main() {
   mkdirSync(FRAMES, { recursive: true });
   const scratch = mkdtempSync(join(tmpdir(), 'corp-dj-walk-'));
-  const store = join(scratch, 'store');
+  const shared = process.env.CORP_SHARED_SERVER === '1';
+  const store = shared ? process.env.CORP_DATA : join(scratch, 'store');
   const profile = join(scratch, 'chrome');
   mkdirSync(store, { recursive: true });
   mkdirSync(profile, { recursive: true });
 
   const port = Number(process.env.CORP_PORT || 8793);
   if (port === 8790) refuse('this walk refuses the preview\'s own port');
-  if (!(await portIsFree(port))) {
+  if (!shared && !(await portIsFree(port))) {
     refuse(`port ${port} is busy, so this walk cannot run. Stop whatever holds it, or set CORP_PORT.`);
   }
 
@@ -364,16 +365,16 @@ async function main() {
   };
   const approver = linkFor('Northstar', 'approver');
 
-  const server = spawn('python3', ['corporate/server.py'], {
-    cwd: BENCH, env: { ...process.env, CORP_PORT: String(port), CORP_DATA: store },
-    stdio: 'ignore'
-  });
+  const server = shared ? null : spawn('python3', ['corporate/server.py'], {
+      cwd: BENCH, env: { ...process.env, CORP_PORT: String(port), CORP_DATA: store },
+      stdio: 'ignore'
+    });
   const base = `http://127.0.0.1:${port}`;
   let alive = false;
   for (let tries = 0; tries < 60 && !alive; tries += 1) {
     try { alive = (await fetch(`${base}/dj/`)).status === 200; } catch (not_yet) { await sleep(150); }
   }
-  if (!alive) { server.kill(); refuse('the server never answered on its own port'); }
+  if (!alive) { if (server) server.kill(); refuse('the server never answered on its own port'); }
 
   const asMiles = (path, options = {}) => fetch(base + path, {
     ...options,
@@ -392,7 +393,7 @@ async function main() {
 
   const packUp = () => {
     try { chrome.kill(); } catch (gone) { /* already */ }
-    try { server.kill(); } catch (gone) { /* already */ }
+    if (server) try { server.kill(); } catch (gone) { /* already */ }
   };
   // A walk killed half way (a closed pipe, a control-C) must not leave a
   // server holding the port and a Chrome holding the profile.
@@ -463,7 +464,7 @@ async function main() {
     await keyboardOnlyChecks(page, base, northstar.event_id);
   } finally {
     chrome.kill();
-    server.kill();
+    if (server) server.kill();
     await sleep(200);
     rmSync(scratch, { recursive: true, force: true });
   }

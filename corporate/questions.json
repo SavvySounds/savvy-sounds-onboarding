@@ -104,6 +104,15 @@
         "Pacific/Honolulu",
         "Other"
       ],
+      "option_labels": {
+        "America/Los_Angeles": "Los Angeles (Pacific)",
+        "America/Denver": "Denver (Mountain)",
+        "America/Phoenix": "Phoenix (Mountain)",
+        "America/Chicago": "Chicago (Central)",
+        "America/New_York": "New York (Eastern)",
+        "Pacific/Honolulu": "Honolulu (Hawaii)",
+        "Other": "Something else"
+      },
       "owner": "event",
       "required_to_submit": false,
       "offers_miles": false
@@ -402,6 +411,16 @@
         "closing",
         "custom"
       ],
+      "option_labels": {
+        "arrival": "Arrival",
+        "networking": "Networking",
+        "dinner": "Dinner",
+        "presentations": "Presentations",
+        "awards": "Awards",
+        "dancing": "Dancing",
+        "closing": "Closing",
+        "custom": "Something else"
+      },
       "owner": "running_order",
       "required_to_submit": false,
       "offers_miles": false

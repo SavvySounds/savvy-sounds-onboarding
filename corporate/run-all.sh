@@ -37,16 +37,11 @@ else
 fi
 
 step "3 of 3 — the walk through the real screens"
-if [ -f corporate/proof/walk.mjs ]; then
-  if node corporate/proof/walk.mjs; then
-    echo "walk: green"
-  else
-    echo "walk: RED"
-    FAILED=1
-  fi
+if node corporate/proof/walk.mjs; then
+  echo "walk: green"
 else
-  echo "not here yet — the screen crew brings corporate/proof/walk.mjs."
-  echo "This run does NOT prove anything about the two screens."
+  echo "walk: RED"
+  FAILED=1
 fi
 
 echo ""

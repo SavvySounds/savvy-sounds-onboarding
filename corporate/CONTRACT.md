@@ -168,12 +168,14 @@ event's zone and, when it differs from the Mac's, says so in one line.
 
 Tokens are 32 hex chars from `secrets.token_hex(16)`. A revoked or expired
 token answers **403** with `{ "ok": false, "error": "link-expired" }` on every
-door — read, save, day sheet, export. A token scopes to exactly one event;
+door — read, save, day sheet, export. The page address `/c/<token>` with a dead
+or malformed token answers **403** with one plain static sentence
+(`client/expired.html`, no script, no data) — never the page itself. A token scopes to exactly one event;
 asking for any other event with it is **403** `not-your-event`. The `dj_token`
 reaches every event. Tokens travel in the `X-Access-Token` header (never in the
 URL of an API call); the private page link is `/c/<token>` and the page moves
-the token into memory + `sessionStorage`, then the address bar shows `/c/`
-only. **This is the local preview's access story. A hosted version keeps the
+the token into memory + `sessionStorage`, then the address bar shows `/c` or
+`/c/`; both spellings serve the shell. **This is the local preview's access story. A hosted version keeps the
 same doors and swaps nothing else.**
 
 ## 6. Doors (all JSON; every non-200 carries `{ok:false, error:"<word>"}`)

@@ -400,7 +400,25 @@ class Doors(ServerCase):
     def test_the_private_link_opens_the_client_page(self):
         code, page = self.call("/c/%s" % self.token["approver"], raw=True)
         self.assertEqual(code, 200)
-        self.assertIn("Screen coming", page)
+        self.assertIn("Savvy Sounds", page)
+
+    def test_both_private_page_spellings_open(self):
+        for path in ("/c", "/c/"):
+            code, page = self.call(path, raw=True)
+            self.assertEqual(code, 200, path)
+            self.assertIn("Savvy Sounds", page, path)
+
+    def test_unknown_revoked_and_expired_private_links_share_one_refusal(self):
+        revoked = self.token["approver"]
+        self.store.access("revoke", token=revoked)
+        expired = self.store.access("mint", event_id=self.event_id,
+                                    person_id="p_theo", role="approver",
+                                    expires_at="2020-01-01T00:00:00Z")["token"]
+        for token in ("f" * 32, revoked, expired):
+            code, page = self.call("/c/%s" % token, raw=True)
+            self.assertEqual(code, 403, token)
+            self.assertIn("This link has expired", page, token)
+            self.assertNotIn("<script", page, token)   # the page itself never ships
 
     def test_a_link_that_is_not_a_link_does_not_open_the_page(self):
         code, body = self.call("/c/not-a-real-token", raw=True)
@@ -409,6 +427,7 @@ class Doors(ServerCase):
     def test_miles_page_opens(self):
         code, page = self.call("/dj/", raw=True)
         self.assertEqual(code, 200)
+        self.assertIn("Savvy Sounds", page)
         self.assertIn('id="room"', page)
         # Nothing about an event is baked into the page: it asks for the pass
         # and then reads everything through the doors.

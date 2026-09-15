@@ -260,10 +260,17 @@ def read_changes(event_id):
     if not path.exists():
         return []
     out = []
-    for line in path.read_text(encoding="utf-8").splitlines():
-        line = line.strip()
-        if line:
+    lines = [(number, line.strip()) for number, line in
+             enumerate(path.read_text(encoding="utf-8").splitlines(), 1)
+             if line.strip()]
+    for place, (number, line) in enumerate(lines):
+        try:
             out.append(json.loads(line))
+        except json.JSONDecodeError as problem:
+            if place == len(lines) - 1:
+                break
+            raise RuntimeError("history line %d in %s is broken: %s"
+                               % (number, path.name, problem))
     return out
 
 
@@ -356,6 +363,11 @@ def save(event_id, actor, role, payload, questions=None):
         prospective = json.loads(json.dumps(event))
         _apply_fields(prospective, applied, actor, role, stamp=now(), dry=True)
         errors = rules.validate(questions, prospective, bool(payload.get("submit")))
+        if not errors and proposed:
+            with_proposals = json.loads(json.dumps(prospective))
+            _apply_fields(with_proposals, {field: touched[field] for field in proposed},
+                          actor, role, stamp=now(), dry=True)
+            errors = rules.validate(questions, with_proposals, False)
         if errors:
             return 422, {"ok": False, "error": "invalid", "errors": errors}
 
