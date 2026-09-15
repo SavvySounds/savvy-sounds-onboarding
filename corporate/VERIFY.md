@@ -73,7 +73,7 @@ clipboard must not change a byte).
     node --test corporate/tests/*.test.mjs
 
 One file per piece of the script, one `describe` per subject, every check
-named in words. Expect `pass 111`, `fail 0`, `skipped 0` in well under two
+named in words. Expect `pass 113`, `fail 0`, `skipped 0` in well under two
 seconds. Among them:
 
 - `rules.test.mjs` — every rule (while the port was being made, a parity
@@ -134,7 +134,7 @@ scratch folder; two real surnames are pinned by fingerprint and must not appear.
 Every needle is counted against the source before anything runs (a quote that
 matches nowhere or twice stops the run in words); the unbroken checks run
 first and a red baseline refuses to go on; each break gets a fresh copy of the
-folder in a temp directory the runner owns. Expect `35 of 35 caught.` (13 in the rules, 12 in the writer, 8 in the doors,
+folder in a temp directory the runner owns. Expect `37 of 37 caught.` (13 in the rules, 14 in the writer, 8 in the doors,
 1 in the day sheet, 2 in the stand-in's Host seam).
 
 ---
@@ -143,7 +143,7 @@ folder in a temp directory the runner owns. Expect `35 of 35 caught.` (13 in the
 
     corporate/run-all.sh
 
-The two sweeps, then the checks (111), then the breaking-on-purpose, then
+The two sweeps, then the checks (113), then the breaking-on-purpose, then
 `corporate/proof/walk.mjs`: the client walk and Miles's walk against one
 shared stand-in, then the Stage 1 loop itself — the planner moves the awards
 start 8:00 PM → 8:15 PM on the real page, Miles sees both times with Jules

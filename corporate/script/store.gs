@@ -302,11 +302,21 @@ function save(event_id, actor, role, payload, questions) {
         after: touched[field], affected: [], decision_required: true,
         resolved_by: null, resolved_at: null, submission_id: submission_id});
     });
+    if (!log.length) {
+      // A send that changed no answer still moved the event (its stage, its
+      // submitted_at, or nothing but the revision); every revision gets a line.
+      log.push({change_id: "ch_" + Utilities.getUuid().replace(/-/g, "").slice(0, 12),
+        event_id: event_id, revision: event.revision, at: stamp, actor: actor,
+        role: role, origin: origin, field: "event", before: {stage: before.stage},
+        after: {stage: event.stage, submitted_at: event.submitted_at || null},
+        affected: [], decision_required: false, resolved_by: null, resolved_at: null,
+        submission_id: submission_id});
+    }
     var receipt = {event_id: event_id, revision: event.revision, saved_at: stamp,
       submission_id: submission_id, name: _event_name(event)};
     if (submission_id) event.receipts[submission_id] = receipt;
     _write_json(_safe(event_id), event);
-    if (log.length) _append_changes(event_id, log);
+    _append_changes(event_id, log);
     return [200, {ok: true, revision: event.revision, receipt: receipt,
       proposed: proposed, effects: {
         open_items_added: made.open_items_added.map(function (item) { return item.item_id; }),
@@ -394,6 +404,9 @@ function resolve(event_id, actor, role, field, take, submission_id, questions) {
     if (!event) return [404, {ok: false, error: "no-such-event"}];
     if (submission_id && Object.prototype.hasOwnProperty.call(event.receipts || (event.receipts = {}), submission_id)) {
       return [200, {ok: true, revision: event.receipts[submission_id].revision, duplicate: true}];
+    }
+    if (take !== "proposal" && take !== "current") {
+      return [422, {ok: false, error: "invalid", errors: [{field: "take", message: "Say proposal or current."}]}];
     }
     var group;
     try { group = owner_of(field, questions); }

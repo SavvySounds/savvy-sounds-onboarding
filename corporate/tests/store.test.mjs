@@ -118,6 +118,23 @@ describe('Saving', {concurrency: false}, () => {
     assert.equal(store.load_event(event.event_id).revision, first[1].revision);
   }));
 
+  test('a send that changes no answer still leaves a line in the history', () => withStore((store) => {
+    const [event] = plant(store);
+    const [code, body] = store.save(event.event_id, 'p_theo', 'approver', {base_revision: event.revision, submission_id: 'sub_empty', answers: {}});
+    assert.equal(code, 200); assert.equal(body.revision, event.revision + 1);
+    const lines = store.changes_since(event.event_id, event.revision);
+    assert.equal(lines.length, 1); assert.equal(lines[0].revision, body.revision); assert.equal(lines[0].field, 'event');
+  }));
+
+  test('settling with a word that is not proposal or current is refused and the proposal stays', () => withStore((store) => {
+    const [event] = plant(store);
+    const [code, body] = store.resolve(event.event_id, 'p_miles', 'dj', 'moments.m_awards.start', 'both', 'sub_both');
+    assert.equal(code, 422); assert.equal(body.error, 'invalid');
+    const after = store.load_event(event.event_id);
+    assert.equal(after.revision, event.revision);
+    assert.ok(after.moments.find((m) => m.moment_id === 'm_awards').proposal, 'the proposal is still there');
+  }));
+
   test('what was there before is kept on every changed answer', () => withStore((store) => {
     const [event] = plant(store);
     store.save(event.event_id, 'p_theo', 'approver', {base_revision: event.revision,

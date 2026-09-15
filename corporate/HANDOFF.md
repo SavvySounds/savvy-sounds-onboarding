@@ -43,9 +43,9 @@ handoff (Stages 0 and 1) is in git history at `314273e`.
 
 - 12 sweeps (one writer: only `store.gs` names Drive, only `load.mjs` puts
   bytes on the disk; ship-safe: no real name, no personal path).
-- 111 checks over the script: every check the Python had, plus the lock raced
+- 113 checks over the script: every check the Python had, plus the lock raced
   by four processes, plus the stand-in's redirect hop read over a real port.
-- 35 deliberate breaks, every one caught by a named check, the runner refusing
+- 37 deliberate breaks, every one caught by a named check, the runner refusing
   a needle that matches other than once and a red baseline.
 - The real-screen gate in headless Chrome: the client page on a phone (41
   readings shared, 175 standalone across both fixtures and both widths),
@@ -62,6 +62,12 @@ handoff (Stages 0 and 1) is in git history at `314273e`.
   list door's shape, the missing CORS header on the stand-in's 302, the pages'
   absolute asset paths, the seed parser, the opener's same-document hop, the
   gate's data reads, eight typographic dashes in the script.
+- One outside review (Codex Terra, read-only export of `00b7fd6`, 74k tokens,
+  2 min): no HIGH; two MEDIUMs, both true and both inherited from the Python
+  (a send that changed nothing left a revision with no history line; settling a
+  proposal with a word other than proposal/current threw the proposal away).
+  Both fixed in `store.gs` with a check and a needle each; the reviewer's own
+  confirm-commands were run first. Report: `~/Developer/handoff/jobs/review-corporate-hosted-home/`.
 
 ## Deliberately not done
 
@@ -87,5 +93,5 @@ review and show copy) on this bench, one crew per piece.
 ## Receipt
 
 Allowance on the ChatGPT plan is not exposed by the Codex CLI: unknown,
-recorded as such. Six jobs, ~555k tokens by the ledger, ~50 minutes of Codex
-time, zero retries, zero paid extras.
+recorded as such. Seven jobs (six builds, one review), ~630k tokens by the ledger, about an
+hour of Codex time, zero retries, zero paid extras.
