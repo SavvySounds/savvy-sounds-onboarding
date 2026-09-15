@@ -98,6 +98,59 @@ def summarise(event):
             "next_action": event.get("next_action") or rules.next_action(event)}
 
 
+# ------------------------------------------------------- starting a booking
+
+# Who a booking can be started for.  Miles is not on this list: he is the one
+# starting it, and `dj` is not a person a private link is ever minted for.
+BOOKING_ROLES = ("approver", "planner", "production", "contact")
+
+# CONTRACT.md section 2, the same words: what each role gets to decide.
+DECIDES = {"approver": ["direction", "event"], "planner": ["running_order"],
+           "production": ["production"], "contact": []}
+
+
+def people_for_a_new_booking(given, questions=None):
+    """The people a booking is started for, or what is wrong with them.
+
+    A name here is text Miles typed, so the id a person is known by is built
+    from a reduced leaf of it and never from the text itself.  One person per
+    role: the links come back keyed by role, so two planners would lose one
+    of the two links without a word.
+    """
+    people, errors, taken = [], [], {}
+    for index, person in enumerate(given or []):
+        if not isinstance(person, dict):
+            errors.append({"field": "people.%d" % index,
+                           "message": "A person is a name, a role and an email."})
+            continue
+        name = str(person.get("name") or "").strip()
+        role = str(person.get("role") or "").strip()
+        if role not in BOOKING_ROLES:
+            errors.append({"field": "people.%d" % index,
+                           "message": "That is not one of the roles a booking starts with."})
+            continue
+        if role in taken:
+            errors.append({"field": "people.%d" % index,
+                           "message": "Only one person for each role."})
+            continue
+        taken[role] = True
+        person_id = "p_" + rules.slug(name)
+        while person_id in [p["person_id"] for p in people]:
+            person_id += "x"
+        people.append({"person_id": person_id, "name": name, "role": role,
+                       "email": str(person.get("email") or "").strip(),
+                       "phone": str(person.get("phone") or "").strip(),
+                       "decides": list(DECIDES.get(role, []))})
+    # Names, roles and email addresses are checked by the same rule the save
+    # door uses; nothing here invents a second opinion about them.
+    questions = questions or store.load_questions()["questions"]
+    errors.extend(rules.validate(questions, {"people": people}, False))
+    if not [p for p in people if p["role"] == "approver"]:
+        errors.append({"field": "people",
+                       "message": "We need the person who gives the final yes."})
+    return people, errors
+
+
 def brief(event, who):
     answers = event.get("answers") or {}
     confirmed = {qid: a.get("value") for qid, a in answers.items()
@@ -290,8 +343,13 @@ class Handler(BaseHTTPRequestHandler):
         if parts == ["api", "dj", "events"]:
             if who["role"] != "dj":
                 return self.send_json(403, {"ok": False, "error": "not-allowed"})
+            people, errors = people_for_a_new_booking(body.get("people"))
+            if errors:
+                return self.send_json(422, {"ok": False, "error": "invalid",
+                                            "errors": errors})
             event = store.create_event(body.get("name"), body.get("company"),
-                                       body.get("date"), body.get("tz"))
+                                       body.get("date"), body.get("tz"),
+                                       people=people)
             links = {}
             for person in event["people"]:
                 grant = store.access("mint", event_id=event["event_id"],
@@ -299,6 +357,12 @@ class Handler(BaseHTTPRequestHandler):
                 links[person["role"]] = grant["link"]
             return self.send_json(200, {"ok": True, "event_id": event["event_id"],
                                         "links": links})
+
+        if parts == ["api", "dj", "seen"]:
+            if who["role"] != "dj":
+                return self.send_json(403, {"ok": False, "error": "not-allowed"})
+            code, answer = store.set_seen(body.get("event_id"), body.get("revision"))
+            return self.send_json(code, answer)
 
         if parts == ["api", "dj", "access"]:
             if who["role"] != "dj":

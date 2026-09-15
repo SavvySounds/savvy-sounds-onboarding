@@ -191,8 +191,9 @@ same doors and swaps nothing else.**
 | `GET /api/events/<id>/daysheet` | dj | printable HTML; header prints build time, revision, tz, and the source list |
 | `GET /api/events/<id>/daysheet.csv` | dj | key times + contacts + open items as CSV; every cell starting with `= + - @` or a tab/CR is prefixed with `'` |
 | `GET /api/events/<id>/brief` | any token for that event | client-facing brief JSON: header, moments, confirmed answers, open items owned by the caller's role, next action |
-| `POST /api/dj/events` | dj | create an event from `{name, company, date, tz}` → `{event_id, links:{approver: "/c/<token>", ...}}` (Stage 1: how Miles starts a booking) |
+| `POST /api/dj/events` | dj | create an event from `{name, company, date, tz, people:[{name, role, email, phone}]}` → `{event_id, links:{approver: "/c/<token>", ...}}` (Stage 1: how Miles starts a booking). The people are who the links are for: roles from `approver` · `planner` · `production` · `contact` — never `dj` — one person per role, because the links come back keyed by role and two people on one role would lose a link without a word. An approver is required: a booking nobody can say yes on has no owner for any decision. Each `person_id` is built from a reduced leaf of the name, never from the typed text. Names, roles and emails are checked by the same rule the save door uses; anything wrong is **422** `{ok:false, error:"invalid", errors:[{field, message}]}` and no event is made. |
 | `POST /api/dj/access` | dj | `{event_id, person_id, role, expires_at}` → `{token, link}`; `{revoke: "<token>"}` → `{ok}` |
+| `POST /api/dj/seen` | dj | `{event_id, revision}` → `{ok, dj_seen_revision}`; the store holds the number down to the event's own revision and up to the one already remembered, so the bookmark never runs ahead of the record and never moves back. Nothing is logged and the revision does not move: this is what Miles has read, not a change to the event. It is what `changed_since_seen` counts against. |
 
 Every door checks, at ONE seam in `server.py` before routing: `Host` is
 `127.0.0.1:8790` or `localhost:8790` (else 421), and for any POST the `Origin`

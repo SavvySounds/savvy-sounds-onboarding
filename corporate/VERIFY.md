@@ -430,14 +430,161 @@ list of ordinary capitalised words will have to grow when it is.
 combined `walk.mjs` that `run-all.sh` names is still to be written, and should
 call both screens' walks.
 
-## Miles's page — written by the screen crew
+## Miles's page
 
-Placeholder. `corporate/dj/index.html` currently says "Screen coming".
+His own view of every corporate booking. Nobody else can open it.
 
-When it lands, this section gets: the list of events, "what changed" and "what
-needs me", resolving the planner's proposed awards time, and checking that the
-client's page, Miles's page and a freshly printed day sheet all agree on the
-same revision and the same values.
+### How to reach it
+
+    python3 corporate/seed.py
+    python3 corporate/server.py
+
+Then open `http://127.0.0.1:8790/dj/` and paste the pass `seed.py` printed
+("His pass, for the page to carry"). The pass lives in that browser window and
+nowhere else: not on the disk, not in the address bar. Close the window and it
+is gone; open it again and it asks once more.
+
+What he sees, in this order: every booking with the one that needs him at the
+top; inside a booking, what needs him, what is waiting on each person by name,
+the running order, what changed, the brief, the day sheet, and his own notes.
+
+### The walk that proves it
+
+    node corporate/proof/walk-dj.mjs
+
+It takes about two minutes. It seeds its own practice store, starts its own
+server on port **8793** (never 8790, which is the preview's, and a busy 8793 is
+a RED walk, not a skipped one), opens a headless Chrome nobody can see, and
+prints one line per reading with the number it measured. Nothing pops up,
+nothing makes a sound, and it kills its own server and its own Chrome before it
+prints the last line.
+
+Expect the last line to read **91 of 91 readings passed**, and pictures of the
+real screen in `corporate/proof/frames/` (not committed).
+
+What it measures, and what it read on 2026-09-14:
+
+| Reading | Measured |
+|---|---|
+| the window it thinks it is in | 390 and 1440 wide, and the page visible both times |
+| a wrong pass | shows the door's own words, and never reaches the address bar |
+| the three counts on the overview | equal to the numbers the door answers, every event, both widths |
+| the planner's proposed time | 20:00 and 20:15 both on screen, Jules named, "Take Jules's 20:15" / "Keep 20:00" |
+| taking it | revision moves 3 → 4, the running order shows 20:15–21:00, the cue under it is flagged, 2 new questions appear under the people who owe them |
+| marking it as looked at | "changes since you last looked" goes to 0, one client save later it is 1 |
+| his own question | answered from the page, off the list, and what he wrote is what was kept |
+| the dancing | 21:30–00:30, "finishes the next day", counted as 3 hrs |
+| the day sheet | opens in its own tab and carries the same revision as the view (3), says it is a snapshot, and does not carry his private note |
+| sideways scroll | none: 390px of page in a 390px window, 1440 in 1440 |
+| the keyboard | 18 stops at 390 and 19 at 1440, every one of them with a real ring, none under 44px tall |
+| contrast on the real ground | worst word 7.79:1 (the floor is 7), worst action 4.65:1 (the floor is 4.5), 201 pieces of text measured |
+| Copy | says "Copied" only when the clipboard actually took it; when the browser refuses it selects the words and says "Press ⌘C" |
+| with motion turned down | the screen is byte-for-byte still |
+| the pictures | each one is checked against the window it claims to be of |
+| the words | every name on screen came from the booking or from the short list of words this page says in its own voice |
+| who owns which decision | the three tables in `dj/dj.js` are read out of `rules.py` and compared |
+| somebody else's words | nothing on the page turns them into markup |
+
+**This walk is not yet in `corporate/run-all.sh`.** That file runs the checks,
+then the breaking-on-purpose, then `corporate/proof/walk.mjs` — the client
+page's walk, written by the other desk. A walk nobody runs is not a guard, so
+whoever owns `run-all.sh` adds a line for `walk-dj.mjs` beside it. Until then
+this one is run by hand, with the command above.
+
+### Prove the walk can see a break
+
+Copy the file first, break it, watch the walk go red, then copy it back. Never
+undo it with git — that eats work nobody meant to lose.
+
+    cp corporate/dj/dj.js /tmp/dj-kept.js
+    # take out the words "finishes the next day"; change one line of the
+    # owner table (music_owner) ; add an innerHTML somewhere
+    node corporate/proof/walk-dj.mjs        # expect RED, three named readings
+    cp /tmp/dj-kept.js corporate/dj/dj.js
+    node corporate/proof/walk-dj.mjs        # expect green again
+
+Watched happening on 2026-09-14: those three went red and nothing else did,
+and each line said what to repair. A fourth (a 700px minimum width in the
+stylesheet) turned the sideways-scroll reading red at 390 and named the three
+things hanging over the edge; a fifth (a Copy button that says "Copied" when
+the clipboard refused) turned the honesty reading red.
+
+### What the walk caught that looking would not have
+
+Four real defects, all on the first run:
+
+1. At 390 the page ran 25px off the side, because one line of the history
+   printed a whole answer record as a single unbreakable word.
+2. "37 changes since you last looked" measured 6.8:1 against its own
+   background, under the 7:1 this work holds itself to.
+3. The pictures were lying. A plain screenshot on this Mac lays the page out
+   at the real window's width and then crops it to the narrow one, so the
+   frames showed a wide page cut off at 390 while every live measurement said
+   390 and was right. Frames are now captured whole and each one is checked
+   against the window it claims to be of.
+4. The walk itself read the screen in the gap between the sentence that says
+   what happened and the screen being rebuilt, so it passed or failed on
+   milliseconds. It now waits for the rebuilt screen.
+
+### Marking an event as looked at, by hand
+
+With the server running and the pass from `seed.py` in `$T`, and an event id
+from the list:
+
+    curl -s -H "X-Access-Token: $T" http://127.0.0.1:8790/api/events \
+      | python3 -c "import json,sys; [print(e['event_id'], e['changed_since_seen'], e['revision']) for e in json.load(sys.stdin)]"
+    curl -s -X POST -H "X-Access-Token: $T" -H 'Content-Type: application/json' \
+      -d '{"event_id":"ev_...","revision":99}' http://127.0.0.1:8790/api/dj/seen
+
+Expect the door to answer with the event's OWN revision, never 99 — the
+bookmark cannot run ahead of the record, and asking again with a smaller
+number cannot move it back. Ask for the list again and that event's count of
+changes since he last looked is 0.
+
+### What the design passes found
+
+Two passes on the finished screen: a design review reading the real pictures,
+and a mechanical one that measured the live page in a browser.
+
+**Changed because of them:**
+
+| Found | Changed |
+|---|---|
+| The line above the two buttons said the planner "decides this one", and then the buttons let Miles decide it. A two-second hesitation at the worst moment. | It now says Jules "owns this part of the night". The buttons are his either way. |
+| "Taken. Awards — start time is now what they asked for." cannot be checked by a man holding a microphone. | "Taken. Awards — start time is now 20:15, was 20:00." |
+| "Take Jules's 20:15" and "Keep 20:00" were identical twins 10px apart on a phone, with no undo behind either. | Only the one that changes something is a filled button. |
+| The cue he has to hit live, and the name he has to say, were the quietest things on the page — body-sized words on a background the same colour as an empty box. | Both are bigger, and "say it like this" sits on its own gold ground. The client's own words on that page: a wrong name is unrecoverable. |
+| Seven jump buttons stood between him and the thing that needed him, eating a sixth of a phone screen before he read a word. | The first block comes first; the jump bar sits under it. |
+| "37 changes since you last looked", and the first thirty-five were the form arriving in one second. | They fold into one line: "35 answers arrived together", with the names of the first six. The event page went from 13,000px to 8,700px on a phone. |
+| "revision 3" was a pill in the top six lines, where it tells him nothing he can act on. | It moved next to the day sheet, which is the one place the number means something: a sheet printed from the same answers says the same number. |
+| Every contact's words were a keyboard stop that does nothing, so reaching the last Copy took thirteen presses instead of six. | The words are words again; only the buttons are stops. |
+| Sizes were in pixels, so making text bigger in his browser did nothing. | Everything is in rem. Bigger text makes the whole screen bigger, and the walk proves it: 16px to 24px, headings still bigger than the words, buttons still 44px, nothing off the side. |
+| A prose line ran 122 characters at a desk. | Prose stops at 68 characters. |
+| "The page and the server disagree about where they are." | "That did not reach your Mac the way it had to. Reload the page." |
+| A change line printed the practice fixture's own word, "fixture loaded". | "This practice booking was loaded." |
+| A moment with no length printed as "00:30–00:30". | It prints one time. |
+| A pass that stops working mid-session left him on a screen he could not refresh. | Any door answering that the pass is finished takes him back to the one box that fixes it. |
+
+**Found and deliberately kept:**
+
+- The mechanical pass flags the coloured bar down the side of the cue block as
+  a tell of machine-made design. It is the one thing that separates the words
+  Miles says out loud from the words describing the moment, and it is ink, not
+  a brand colour. Kept on purpose.
+- The page is light only. A dark room is where he reads it, and a dark version
+  is worth doing — but it belongs with the client's page, so the two sides of
+  one tool are decided together, not in this folder alone.
+- His own notes are shown, not editable. Writing them needs a door that does
+  not exist yet.
+- Taking a proposal cannot be undone from this page. Both values are on screen
+  before the tap and in the sentence afterwards, and the change log keeps what
+  it was — but putting it back needs an edit this screen does not have.
+
+**One thing worth knowing about the mechanical pass:** run as it ships, it
+cannot read this page at all. Every word on the screen is built as the page
+runs, and the scanner reads files, so it reported nothing for a page it had
+never seen. That is not a clean bill of health, and the walk in this section is
+what actually reads the screen.
 
 ---
 

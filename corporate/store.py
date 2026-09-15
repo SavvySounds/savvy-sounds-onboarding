@@ -620,6 +620,42 @@ def set_open_item(event_id, actor, role, item_id, resolved, answer="",
         return 200, {"ok": True, "revision": event["revision"]}
 
 
+# ------------------------------------------------------------- what Miles read
+
+def set_seen(event_id, revision):
+    """Remember how far Miles has read this event's changes.
+
+    Two things this must never do.  It must never move PAST where the event
+    actually is: a bookmark ahead of the record hides changes he has not read.
+    And it must never move BACK: an older number coming in late (a second
+    window, a stale page) would put changes he has already read in front of him
+    again.  So the number kept is the one he asked for, held down to the event's
+    own revision and held up to the one already remembered.
+
+    This is a bookmark, not a change to the event: nothing is logged and the
+    revision does not move.
+    """
+    if not _EVENT_ID.match(str(event_id or "")):
+        return 404, {"ok": False, "error": "no-such-event"}
+    try:
+        wanted = int(revision)
+    except (TypeError, ValueError):
+        return 422, {"ok": False, "error": "invalid",
+                     "errors": [{"field": "revision",
+                                 "message": "That is not a revision number."}]}
+    with _lock_for(event_id):
+        event = load_event(event_id)
+        if event is None:
+            return 404, {"ok": False, "error": "no-such-event"}
+        standing = int(event.get("dj_seen_revision") or 0)
+        wanted = min(wanted, int(event.get("revision") or 0))
+        wanted = max(wanted, standing)
+        if wanted != standing:
+            event["dj_seen_revision"] = wanted
+            _write_json(_safe(event_id), event)
+        return 200, {"ok": True, "dj_seen_revision": wanted}
+
+
 # ---------------------------------------------------------------------- access
 
 _ACCESS_LOCK = threading.Lock()
