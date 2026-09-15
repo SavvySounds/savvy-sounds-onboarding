@@ -301,8 +301,10 @@ headless Chrome. It walks **both** practice events at **390x844** and at
 **1440x900**, plus the planner's own screen on the awards event, and kills
 every process it started before it prints the last line.
 
-Expect the last line to read **174 of 174 checks passed** and one `PASS` line
-per check above it. Any `FAIL` and it exits red. Frames land in
+Expect the last line to read **175 of 175 checks passed** and one `PASS` line
+per check above it — the last of them says the walk left nothing of its own
+running, because one of its servers once sat on a random port for twenty
+minutes after a run. Any `FAIL` and it exits red. Frames land in
 `corporate/proof/frames/` (not kept in the repo).
 
 What it measures, in numbers, on the real screen:

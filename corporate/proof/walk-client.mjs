@@ -53,10 +53,16 @@ function run(cmd, args, env) {
   });
 }
 
+// Every server this walk starts, so not one of them can outlive it.  One did:
+// a python server sat on a random port for twenty minutes after a run, holding
+// a practice store nobody could see.
+const started = new Set();
+
 async function startServer(port, data) {
   const child = spawn('python3', [join(CORPORATE, 'server.py')],
     { cwd: TOP, env: { ...process.env, CORP_PORT: String(port), CORP_DATA: data },
       stdio: ['ignore', 'pipe', 'pipe'] });
+  started.add(child);
   const until = Date.now() + 15000;
   while (Date.now() < until) {
     try {
@@ -69,11 +75,19 @@ async function startServer(port, data) {
 }
 
 async function stopServer(child) {
-  if (!child || child.killed) return;
+  if (!child) return;
+  if (child.exitCode !== null) { started.delete(child); return; }
   child.kill('SIGTERM');
   await sleep(200);
   if (child.exitCode === null) child.kill('SIGKILL');
-  await sleep(100);
+  await sleep(150);
+  started.delete(child);
+}
+
+async function stopEverything() {
+  for (const child of [...started]) await stopServer(child);
+  const alive = [...started].filter((c) => c.exitCode === null);
+  return alive.length;
 }
 
 function readLinks(printed) {
@@ -740,6 +754,10 @@ async function main() {
       check(`${leg.fixture}-${leg.width} · the walk finished`, false, String(problem.message || problem));
     }
   }
+  const leftBehind = await stopEverything();
+  check('the walk leaves nothing of its own running', leftBehind === 0,
+        leftBehind ? `${leftBehind} server(s) still up` : 'every server it started is stopped');
+
   const bad = results.filter((r) => !r.ok);
   console.log(`\n${results.length - bad.length} of ${results.length} checks passed.`);
   if (bad.length) {
