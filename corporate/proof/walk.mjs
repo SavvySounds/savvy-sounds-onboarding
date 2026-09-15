@@ -254,6 +254,7 @@ async function approverAndExports(token, pass, eventId) {
   check('day sheet matches the event revision and time',
         sheet.status === 200 && sheet.data.includes(`revision ${event.revision}`) && sheet.data.includes('20:15'),
         `revision ${event.revision}, 20:15`);
+  check('day sheet says the dancing runs into the next day', sheet.data.includes('21:30–00:30 (into the next day)'), '21:30–00:30 (into the next day)');
   check('CSV has no formula-starting cell', csv.status === 200 && !unsafeCsvCell(csv.data), '0 unsafe cells');
   return event.revision;
 }

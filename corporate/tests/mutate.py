@@ -229,11 +229,18 @@ NEEDLES = [
      "Miles's private notes go to the client"),
 
     ("server.py",
-     '            person["email"] = ""',
-     '            person["email"] = person["email"]',
+     '        if person.get("person_id") != person_id:\n            person["email"] = ""',
+     '        if person.get("person_id") != person_id:\n            person["email"] = person["email"]',
      "corporate.tests.test_private.Private."
      "test_one_person_never_sees_another_persons_phone_or_email",
      "one person on the event reads everybody else's email"),
+
+    ("server.py",
+     '                    if isinstance(person, dict) and person.get("person_id") != who["person_id"]:',
+     '                    if False:',
+     "corporate.tests.test_private.Private."
+     "test_a_change_to_the_people_list_never_carries_another_persons_details",
+     "a change to the people list hands every client everybody's phone and email"),
 
     ("server.py",
      '        if who.get("event_id") != event_id:',

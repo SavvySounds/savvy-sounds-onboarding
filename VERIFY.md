@@ -7,7 +7,7 @@ Serve the repo root and open pages from the server, never by double-clicking
 the file. Two of the pages need a real web address to work at all:
 
     python3 -m http.server 8765 --bind 127.0.0.1 \
-      --directory /Users/milesdipaola/Projects/savvy-sounds-onboarding
+      --directory "$(pwd)"   # run from the repo folder
 
 Then browse to `http://localhost:8765/`. Stop it with Ctrl-C when you are
 done.

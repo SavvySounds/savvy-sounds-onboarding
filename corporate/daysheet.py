@@ -77,6 +77,8 @@ def _times(event):
         when = moment.get("start") or ""
         if moment.get("end"):
             when += "–" + moment["end"]
+            if moment["end"] < when[:5]:          # ends before it starts = the next day
+                when += " (into the next day)"
         rows.append({
             "moment_id": moment["moment_id"],
             "when": when,

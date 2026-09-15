@@ -48,6 +48,33 @@ class Private(ServerCase):
                 self.assertEqual(person["email"], "")
                 self.assertEqual(person["phone"], "")
 
+    def test_a_change_to_the_people_list_never_carries_another_persons_details(self):
+        """Found by the third outside review: the history line for a people
+        change held whole records, emails and phones included, and any client
+        of the event could read it."""
+        event = self.store.load_event(self.event_id)
+        people = json.loads(json.dumps(event["people"]))
+        people.append({"person_id": "p_new", "name": "Rowan Ellis", "role": "contact",
+                       "email": "rowan@example.com", "phone": "555-0199", "decides": []})
+        code, body = self.call("/api/events/%s/save" % self.event_id, token=self.token["approver"],
+                               body={"base_revision": event["revision"], "submission_id": "sub_people",
+                                     "people": people})
+        self.assertEqual(code, 200, body)
+        history = json.loads(self._client_text("/api/events/%s/changes?since=0" % self.event_id, "contact"))
+        people_lines = [c for c in history["changes"] if c["field"] == "people"]
+        self.assertEqual(len(people_lines), 1, "the change itself must still be in the history")
+        line = json.dumps(people_lines[0])
+        for secret in ("theo@example.com", "jules@example.com", "rowan@example.com",
+                       "555-0119", "555-0108", "555-0199"):
+            self.assertNotIn(secret, line)
+        self.assertIn("mina@example.com", line)          # their own row stays theirs
+        # the new person's details live only in the people list, so nowhere at all
+        whole = json.dumps(history)
+        self.assertNotIn("rowan@example.com", whole)
+        self.assertNotIn("555-0199", whole)
+        code, mine = self.call("/api/events/%s/changes?since=0" % self.event_id, token=self.dj)
+        self.assertIn("rowan@example.com", json.dumps(mine))   # Miles still sees everything
+
     def test_the_answers_the_clients_own_side_typed_still_read_back(self):
         """The form has to show a client what they wrote, or it cannot be reviewed.
 

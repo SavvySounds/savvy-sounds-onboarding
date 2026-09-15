@@ -169,8 +169,12 @@ with styling, not left in and covered up.
 
     python3 -m unittest corporate.tests.test_private -v
 
-Expect: 9 checks green. One of them reads the same event twice, once as Miles
-and once as a client, and looks for his note in the words themselves.
+Expect: 10 checks green. One of them reads the same event twice, once as Miles
+and once as a client, and looks for his note in the words themselves. Another
+(added after the third outside review, 2026-09-14) changes the people list as
+the approver and then reads the change history as the day-of contact: the
+history line for that change must carry everybody's name and role and nobody
+else's email or phone — history is scrubbed the same way the event is.
 
 Where the line is drawn, and why: a client sees their own row in the contact
 list in full and everybody else's with the email and phone emptied. They do see
@@ -234,12 +238,21 @@ Narrow it while working on one file:
 
     corporate/run-all.sh
 
-The checks, then the breaking-on-purpose, then the walk through the real screens
-once the screen crew has written it. Red anywhere and the whole thing exits red.
-Until `corporate/proof/walk.mjs` exists, the run says out loud that it proves
-nothing about the screens.
+The checks (128), then the breaking-on-purpose (34 needles, every one caught),
+then `corporate/proof/walk.mjs`: the client walk and Miles's walk against one
+shared private server, then the Stage 1 loop itself — the planner moves the
+awards start 20:00 → 20:15 on the real page, Miles sees both times with Jules
+named and takes it, the approver's brief, Miles's view and the day sheet agree
+on one revision, the sheet marks the dancing block "into the next day", the
+CSV has no formula cell, and the networking event submits on a phone and shows
+its receipt. Red anywhere and the whole thing exits red.
 
-Takes about a minute and a half.
+Takes about ten minutes. `CORP_GATE_ONLY=1 node corporate/proof/walk.mjs`
+reruns just the loop while fixing it (about two minutes).
+
+The day sheet prints a block that ends before it starts as
+`21:30–00:30 (into the next day)` — pinned by
+`test_the_day_sheet_says_when_a_block_runs_into_the_next_day`.
 
 ---
 

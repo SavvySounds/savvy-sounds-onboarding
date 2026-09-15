@@ -72,6 +72,14 @@ def changes_for_audience(lines, who):
     for line in deepcopy(lines):
         if line.get("field") == "dj_notes":
             continue
+        if line.get("field") == "people":
+            # A change to the people list carries whole records; another
+            # person's email and phone are removed, never just hidden.
+            for side in ("before", "after"):
+                for person in line.get(side) or []:
+                    if isinstance(person, dict) and person.get("person_id") != who["person_id"]:
+                        person["email"] = ""
+                        person["phone"] = ""
         out.append(line)
     return out
 

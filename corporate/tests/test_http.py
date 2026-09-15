@@ -377,6 +377,12 @@ class Doors(ServerCase):
         self.assertEqual(code, 403)
         self.assertEqual(body["error"], "not-allowed")
 
+    def test_the_day_sheet_says_when_a_block_runs_into_the_next_day(self):
+        code, sheet = self.call("/api/events/%s/daysheet" % self.event_id, token=self.dj, raw=True)
+        self.assertEqual(code, 200)
+        self.assertIn("21:30–00:30 (into the next day)", sheet)
+        self.assertNotIn("18:00–19:00 (into", sheet)
+
     def test_a_cell_that_would_run_as_a_formula_leaves_behind_a_quote(self):
         self.call("/api/events/%s/save" % self.event_id, token=self.token["planner"],
                   body={"base_revision": self.base, "submission_id": "sub_csv",
