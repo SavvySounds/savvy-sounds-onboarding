@@ -7,8 +7,8 @@
   --surface-base:#F3EEE4; --surface-raised:#FDFBF6; --surface-sunken:#EDE6D8;
   --surface-line:#DFD6C3; --surface-line-strong:#C8BCA2;
   --ink-primary:#221E17; --ink-secondary:#4E483C; --ink-on-mark:#FFF9EE;
-  --action-mark:#8E6210; --action-mark-deep:#7A5410;
-  --action-signal:#157A70; --action-stop:#B94A30;
+  --action-mark:#8E6210; --action-mark-deep:#654509;
+  --action-signal:#157A70; --action-stop:#B94A30; --ink-stop:#7E2D1A;
   --wash-stop:rgba(185,74,48,.08); --wash-signal:rgba(21,122,112,.08);
   --lift-card:0 1px 2px rgba(60,50,30,.05),0 16px 36px -16px rgba(60,50,30,.18);
   --font-display:'Barlow Condensed','Oswald','Arial Narrow',sans-serif;
@@ -40,6 +40,9 @@ button:focus-visible,input:focus-visible,textarea:focus-visible,select:focus-vis
 .topbar-inner{max-width:760px; margin:0 auto; padding:11px 18px; display:flex; align-items:center; gap:14px;}
 .brand{font-family:var(--font-display); font-weight:600; font-size:17px; letter-spacing:.05em;
   text-transform:uppercase; white-space:nowrap;}
+/* A display rule beats the browser's own [hidden], so say it here once:
+   a bar we have put away stays away. */
+[hidden]{display:none !important;}
 .meter{flex:1; display:flex; gap:3px; align-items:center; min-width:60px;}
 .meter i{flex:1; height:6px; border-radius:2px; background:var(--surface-line-strong); display:block;
   transition:background .3s var(--ease-out);}
@@ -47,7 +50,10 @@ button:focus-visible,input:focus-visible,textarea:focus-visible,select:focus-vis
 .step{font-family:var(--font-data); font-size:12px; color:var(--action-mark-deep); white-space:nowrap;}
 
 /* ---------- page furniture ---------- */
-.wrap{max-width:760px; margin:0 auto; padding:26px 18px 140px;}
+/* The bottom bar is measured, not guessed: its words wrap to a second line on
+   a phone and used to sit over the last question. */
+.wrap{max-width:760px; margin:0 auto; padding:26px 18px; padding-bottom:calc(var(--footbar-h, 140px) + 24px);}
+.viewhead{font-size:clamp(26px,5.5vw,32px); text-transform:uppercase; margin:0 0 10px;}
 .hero h1{font-size:clamp(34px,7vw,56px); line-height:1.02; text-transform:uppercase; margin:0 0 16px;}
 .hero p.lead{font-size:17px; max-width:56ch; margin:0 0 22px;}
 .card{background:var(--surface-raised); border:1px solid var(--surface-line);
@@ -74,8 +80,12 @@ input[type=text],input[type=email],input[type=date],input[type=number],input[typ
 textarea{resize:vertical; min-height:84px; line-height:1.5;}
 input:focus,textarea:focus,select:focus{border-color:var(--action-signal);}
 input::placeholder,textarea::placeholder{color:var(--ink-secondary); opacity:1;}
+/* A question answered "Not sure yet" keeps what was typed ON SCREEN, quietly:
+   taking the words away looked like the page had thrown them out. */
 .q.silent input,.q.silent textarea,.q.silent select,.q.silent .rows,
-.q.silent .chips:not(.states),.q.silent .moment{display:none;}
+.q.silent .chips:not(.states),.q.silent .moment{opacity:.55; pointer-events:none;}
+input:disabled,textarea:disabled,select:disabled{
+  color:var(--ink-primary); -webkit-text-fill-color:var(--ink-primary); cursor:default;}
 
 /* chips: options and the plain-words states */
 .chips{display:flex; flex-wrap:wrap; gap:8px; margin:0 0 4px;}
@@ -84,9 +94,15 @@ input::placeholder,textarea::placeholder{color:var(--ink-secondary); opacity:1;}
   border:1px solid var(--surface-line-strong); color:var(--ink-primary);}
 .chip:hover{border-color:var(--action-signal);}
 .chip[aria-pressed="true"]{background:var(--action-mark); border-color:var(--action-mark); color:var(--ink-on-mark);}
-.states{margin-top:10px; gap:8px;}
-.states .chip{font-size:14px; min-height:44px; padding:8px 14px;}
-.states .chip[aria-pressed="true"]{background:var(--action-signal); border-color:var(--action-signal);}
+/* Every question offers these, so at rest they are a quiet line of words
+   under the box, not another row of pills competing with the answer. */
+.states{margin-top:6px; gap:2px;}
+.states .chip{font-size:14px; min-height:44px; padding:8px 10px; background:none;
+  border-color:transparent; color:var(--ink-secondary); text-decoration:underline;
+  text-underline-offset:3px;}
+.states .chip:hover{color:var(--ink-primary); background:var(--surface-sunken);}
+.states .chip[aria-pressed="true"]{background:var(--action-signal); border-color:var(--action-signal);
+  color:var(--ink-on-mark); text-decoration:none;}
 
 /* song and link rows */
 .rows{display:flex; flex-direction:column; gap:8px;}
@@ -110,7 +126,7 @@ input::placeholder,textarea::placeholder{color:var(--ink-secondary); opacity:1;}
 .moment input[type=time]{font-family:var(--font-data);}
 
 /* ---------- errors, notes ---------- */
-.err{color:var(--action-stop); font-size:14px; font-weight:500; margin:8px 0 0;}
+.err{color:var(--ink-stop); font-size:14px; font-weight:500; margin:8px 0 0;}
 .q.bad input,.q.bad textarea{border-color:var(--action-stop); background:var(--wash-stop);}
 .note{background:var(--surface-sunken); border:1px solid var(--surface-line);
   border-radius:var(--radius-well); padding:12px 14px; margin:0 0 14px; font-size:15px;}
@@ -135,10 +151,10 @@ input::placeholder,textarea::placeholder{color:var(--ink-secondary); opacity:1;}
   display:flex; flex-wrap:wrap; align-items:center; gap:10px;}
 .footbar .status{flex:1 1 160px; font-size:14px; color:var(--ink-secondary); min-width:0;}
 .footbar .status b{color:var(--ink-primary); font-weight:600;}
-.footbar .status.trouble{color:var(--action-stop);}
+.footbar .status.trouble{color:var(--ink-stop);}
 .footbar .btn{flex:0 0 auto;}
 @media(max-width:430px){
-  .footbar .status{order:3; flex-basis:100%;}
+  .footbar .status{order:-1; flex-basis:100%;}
   .footbar .btn{flex:1 1 0; padding:12px 12px;}
 }
 
@@ -158,7 +174,7 @@ input::placeholder,textarea::placeholder{color:var(--ink-secondary); opacity:1;}
 .side{flex:1 1 200px; background:var(--surface-sunken); border:1px solid var(--surface-line);
   border-radius:var(--radius-well); padding:10px 12px;}
 .side .k{font-size:13px; color:var(--ink-secondary);}
-.side .v{font-weight:600; overflow-wrap:anywhere;}
+.side .v{font-weight:600; overflow-wrap:anywhere; white-space:pre-line;}
 pre.copy{background:var(--surface-sunken); border:1px solid var(--surface-line);
   border-radius:var(--radius-well); padding:12px; font-family:var(--font-data); font-size:13px;
   white-space:pre-wrap; overflow-wrap:anywhere; max-height:320px; overflow-y:auto;}

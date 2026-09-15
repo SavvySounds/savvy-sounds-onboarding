@@ -140,6 +140,8 @@ async function waitStatus(page, words, seconds = 12) {
     { seconds, what: `the status line to say ${JSON.stringify(words)}` });
 }
 
+async function screen390(page, tag, width) { return screen(page, tag, width); }
+
 async function screen(page, tag, width) {
   await settle(page);
   const wide = await page.evaluate(
@@ -411,6 +413,19 @@ async function walk({ fixture, width, height, keepMine }) {
           afterStates.data.answers.crowd_notes.value === 'Two halves of one company in one room.',
           JSON.stringify(afterStates.data.answers.crowd_notes.value));
 
+    // ---- a save must not rebuild the box under somebody's hands ---------
+    await gotoSection(page, 2);
+    await typeInto(page, '#f_crowd_notes', ' Still typing');
+    await waitStatus(page, 'Saved · revision');
+    const stillThere = await page.evaluate(`({
+      focused: document.activeElement.id,
+      words: (document.querySelector('#f_crowd_notes') || {}).value
+    })`);
+    check(`${tag} · a save under way does not take the box away from them`,
+          stillThere.focused === 'f_crowd_notes' &&
+          stillThere.words === 'Two halves of one company in one room. Still typing',
+          `cursor in ${stillThere.focused || 'nothing'}, box reads ${JSON.stringify(stillThere.words)}`);
+
     // ---- a refresh mid-form brings the draft back -----------------------
     await gotoSection(page, 2);
     await writeAnswer(page, 'crowd_notes', 'Typed and not yet sent.');
@@ -452,6 +467,34 @@ async function walk({ fixture, width, height, keepMine }) {
     await screen(page, `${tag}-review`, width);
     await keyboardWalk(page, tag);
 
+    // ---- sending with something missing -----------------------------------
+    // The door decides what is missing, and its words go beside the field.
+    await pressWords(page, 'Back to the form');
+    await sleep(200);
+    await gotoSection(page, 5);
+    await clearState(page, 'approver_name');
+    await clearField(page, '#f_approver_name');
+    await sleep(200);
+    await page.click('#nextbtn');                      // Review answers
+    await sleep(300);
+    await pressWords(page, 'Send');
+    await page.waitFor("!!document.querySelector('.q.bad .err')",
+                       { seconds: 15, what: 'the missing answer to be named' });
+    const named = await page.evaluate(`(() => {
+      const bad = document.querySelector('.q.bad');
+      return {words: bad.querySelector('.err').textContent,
+              beside: bad.querySelector('.qlabel').textContent.trim(),
+              focused: document.activeElement.id};
+    })()`);
+    check(`${tag} · sending without a needed answer says which one, beside it`,
+          named.words.length > 0 && named.beside.indexOf('final yes') >= 0 &&
+          named.focused === 'f_approver_name',
+          `"${named.words}" beside "${named.beside}", the screen put the cursor in ${named.focused || 'nothing'}`);
+    await screen(page, `${tag}-missing`, width);
+    await writeAnswer(page, 'approver_name', 'Dana Whitfield');
+    await page.click('#nextbtn');
+    await sleep(300);
+
     // ---- send -------------------------------------------------------------
     const beforeSend = (await door(base, approver.token, `/api/events/${eventId}`)).data.revision;
     await pressWords(page, 'Send');
@@ -476,8 +519,9 @@ async function walk({ fixture, width, height, keepMine }) {
           brief.includes('Your open questions') &&
           (mineOpen === 0 ? brief.includes('Nothing is waiting on you') : brief.includes(briefDoor.data.open_items[0].question)),
           `${mineOpen} open for the ${me.data.role}`);
+    const place = afterSend.tz.split('/').pop().split('_').join(' ');
     check(`${tag} · the brief says which clock its times are on`,
-          brief.includes(afterSend.tz), afterSend.tz);
+          brief.includes('the clock in ' + place), `${afterSend.tz} reads as "${place}"`);
     check(`${tag} · nothing private reaches the page`,
           !brief.includes('do not show the client') && !JSON.stringify(briefDoor.data).includes('dj_notes'),
           'no private note, no other people\'s numbers');
@@ -541,7 +585,6 @@ async function walk({ fixture, width, height, keepMine }) {
     } catch (never) {
       const last = (await sent(page)).filter((s) => s.url.endsWith('/save')).pop();
       clash = 'no two-answers screen. status line: ' + (await statusLine(page)).trim() +
-              ' — the door answered ' + (last && last.status) +
               ' — the door answered ' + (last && last.status) + ', on screen: ' +
               (await page.evaluate("document.getElementById('main').innerText")).replace(/\n+/g, ' | ').slice(0, 160);
     }
@@ -579,6 +622,75 @@ async function walk({ fixture, width, height, keepMine }) {
 
     await page.close();
     page = null;
+
+    // ---- the person who settles the running order -------------------------
+    // Somebody suggests a new time for a part of the night; only the person
+    // whose decision it is sees the two answers and picks one.
+    const planner = wanted.people.find((p) => p.role === 'planner');
+    if (planner) {
+      const awards = (await door(base, approver.token, `/api/events/${eventId}`)).data
+        .moments.find((m) => m.kind === 'awards');
+      const suggested = {moment_id: awards.moment_id, kind: awards.kind,
+                         approval: awards.approval, start: '20:30', end: '21:30'};
+      const put = await door(base, approver.token, `/api/events/${eventId}/save`,
+        { base_revision: (await door(base, approver.token, `/api/events/${eventId}`)).data.revision,
+          submission_id: 'sub_walk_suggest_' + Date.now(), submit: false, moments: [suggested] });
+      check(`${tag} · a suggestion from somebody who does not own the time waits, it does not land`,
+            put.status === 200 && (put.data.proposed || []).indexOf(`moments.${awards.moment_id}.start`) >= 0,
+            `waiting on the planner: ${JSON.stringify(put.data.proposed)}`);
+
+      const theirs = await launch({ width, height, scratch: process.env.CORP_WALK_SCRATCH || undefined });
+      try {
+        await theirs.open(`${base}/c/${planner.token}`);
+        await theirs.waitFor("document.querySelector('.view')");
+        await pressWords(theirs, 'See your event brief');
+        await theirs.waitFor("document.getElementById('main').innerText.indexOf('Two answers to settle') >= 0",
+                             { seconds: 12, what: 'the settle block' });
+        const shown = await theirs.evaluate("document.getElementById('main').innerText");
+        check(`${tag} · the planner is shown both times and who asked for the change`,
+              shown.includes('8:00 PM') && shown.includes('8:30 PM') &&
+              shown.includes(approver.name.split(' ')[0]),
+              shown.split('\n').filter(Boolean).slice(0, 8).join(' / ').slice(0, 150));
+        await theirs.evaluate("document.querySelector('.conflict').scrollIntoView({block: 'center'})");
+        await screen390(theirs, `${tag}-settle`, width);
+
+        // an open question with nothing written in it must say so
+        const items = (await door(base, planner.token, `/api/events/${eventId}/brief`)).data.open_items;
+        check(`${tag} · the planner is asked only what is theirs`, items.length > 0,
+              `${items.length} open questions owned by the planner`);
+        await pressWords(theirs, 'Send this answer');
+        await theirs.waitFor("!!document.querySelector('.err')", { seconds: 6, what: 'the empty-box words' });
+        const nagged = await theirs.evaluate("document.querySelector('.err').textContent");
+        check(`${tag} · sending an empty answer says what is missing`,
+              nagged.indexOf('Write your answer first') >= 0, JSON.stringify(nagged));
+
+        const beforeItem = (await door(base, planner.token, `/api/events/${eventId}`)).data.revision;
+        await theirs.click('#oi_' + items[0].item_id);
+        await theirs.type('Jules calls it from the stage left wing.');
+        await pressWords(theirs, 'Send this answer');
+        await theirs.waitFor(`(() => {
+          const now = ${JSON.stringify(items[0].item_id)};
+          return !document.getElementById('oi_' + now);
+        })()`, { seconds: 12, what: 'the answered question to close' });
+        const afterItem = (await door(base, planner.token, `/api/events/${eventId}`)).data;
+        const closed = afterItem.open_items.find((i) => i.item_id === items[0].item_id);
+        check(`${tag} · an answered question closes and the answer is kept`,
+              closed.resolved === true && afterItem.revision === beforeItem + 1,
+              `revision ${beforeItem} to ${afterItem.revision}, ${items[0].item_id} answered`);
+
+        // and the time they pick is the time that is written
+        await pressWords(theirs, `Take ${approver.name.split(' ')[0]}'s`);
+        await theirs.waitFor(`document.getElementById('main').innerText.indexOf('Two answers to settle') < 0`,
+                             { seconds: 12, what: 'the settled block to go' });
+        const settledTime = (await door(base, planner.token, `/api/events/${eventId}`)).data
+          .moments.find((m) => m.kind === 'awards');
+        check(`${tag} · every part of the change they took is written, not just the first`,
+              settledTime.start === '20:30' && settledTime.end === '21:30' && !settledTime.proposal,
+              `awards now run ${settledTime.start} to ${settledTime.end}`);
+      } finally {
+        await theirs.close();
+      }
+    }
 
     // ---- with motion turned down, in a Chrome of its own ------------------
     // (a key sent through the devtools protocol can stop a Chrome answering

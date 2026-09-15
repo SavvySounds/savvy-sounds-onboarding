@@ -108,6 +108,10 @@
 
   function firstWord(name) { return String(name || '').split(' ')[0]; }
 
+  function slug(word) {
+    return String(word).toLowerCase().replace(/[^a-z0-9]+/g, '-');
+  }
+
   function titled(word) {
     return String(word || '').charAt(0).toUpperCase() + String(word || '').slice(1);
   }
@@ -130,7 +134,11 @@
 
   function setAnswer(qid, value, state) {
     var was = S.dirty.answers[qid] || {};
-    S.dirty.answers[qid] = {value: value, state: state, kept: was.kept};
+    var now = {value: value, state: state, kept: was.kept};
+    // Back to exactly what the event already holds is nothing to say: sending
+    // it again would land as a fresh suggestion for somebody to approve.
+    if (same(now, saved(qid))) delete S.dirty.answers[qid];
+    else S.dirty.answers[qid] = now;
     keepDraft();
     queueSave();
   }
@@ -163,9 +171,18 @@
     Object.keys(patch).forEach(function (key) { moment[key] = patch[key]; });
     delete moment.previous;
     delete moment.proposal;
-    S.dirty.moments[moment.moment_id] = moment;
+    var standing = null;
+    savedMoments().forEach(function (m) { if (m.moment_id === moment.moment_id) standing = m; });
+    if (standing && sameMoment(moment, standing)) delete S.dirty.moments[moment.moment_id];
+    else S.dirty.moments[moment.moment_id] = moment;
     keepDraft();
     queueSave();
+  }
+
+  function sameMoment(mine, standing) {
+    return Object.keys(mine).every(function (attr) {
+      return JSON.stringify(mine[attr]) === JSON.stringify(standing[attr]);
+    });
   }
 
   function momentOn(kind) { return !!momentFor(kind).active; }
@@ -260,8 +277,18 @@
       if (Array.isArray(value)) value = value.filter(function (line) { return String(line).trim(); });
       answers[qid] = {value: value, state: mine.state};
     });
+    // Only what really moved.  Sending a whole part of the night when one
+    // time changed asks somebody to approve fourteen things instead of one.
     var moments = Object.keys(S.dirty.moments).map(function (mid) {
-      return S.dirty.moments[mid];
+      var mine = S.dirty.moments[mid];
+      var standing = null;
+      savedMoments().forEach(function (m) { if (m.moment_id === mid) standing = m; });
+      if (!standing) return mine;
+      var trimmed = {moment_id: mid, kind: mine.kind, approval: mine.approval};
+      Object.keys(mine).forEach(function (attr) {
+        if (JSON.stringify(mine[attr]) !== JSON.stringify(standing[attr])) trimmed[attr] = mine[attr];
+      });
+      return trimmed;
     });
     var body = {base_revision: S.event.revision, submission_id: S.attempt,
                 submit: !!submit, answers: answers};
@@ -296,19 +323,31 @@
   function landed(reply, sent, submit) {
     S.sending = false;
     if (reply.status === 200 && reply.data && reply.data.ok) {
+      // Only let go of what was actually sent.  A letter typed while the save
+      // was in the air is NOT saved, and dropping it here would take it off
+      // the screen as well — which is how typing disappears on a slow phone.
       Object.keys(sent.answers).forEach(function (qid) {
-        var now = S.dirty.answers[qid];
-        if (now && now.state === sent.answers[qid].state) delete S.dirty.answers[qid];
+        if (same(S.dirty.answers[qid], sent.answers[qid])) delete S.dirty.answers[qid];
       });
-      (sent.moments || []).forEach(function (m) { delete S.dirty.moments[m.moment_id]; });
+      (sent.moments || []).forEach(function (m) {
+        if (same(S.dirty.moments[m.moment_id], m)) delete S.dirty.moments[m.moment_id];
+      });
       S.attempt = '';
       S.errors = {};
       keepDraft();
       S.receipt = submit ? reply.data.receipt : S.receipt;
       return reread().then(function () {
         S.status = {kind: 'saved', text: String(S.event.revision)};
-        if (submit) { S.view = 'receipt'; loadBrief(); }
-        paint();
+        if (submit) {
+          S.view = 'receipt';
+          window.scrollTo(0, 0);
+          loadBrief();
+          paint();
+        } else if (typing()) {
+          paintStatus();     // never rebuild the box under somebody's hands
+        } else {
+          paint();
+        }
       });
     }
     if (reply.status === 409 && reply.data) {
@@ -329,6 +368,32 @@
     }
     S.status = {kind: 'trouble', text: ''};
     paint();
+  }
+
+  function same(mine, sent) {
+    if (!mine || !sent) return false;
+    return JSON.stringify(dropKept(mine)) === JSON.stringify(dropKept(sent));
+  }
+
+  function dropKept(entry) {
+    var copy = {};
+    Object.keys(entry).forEach(function (key) {
+      if (key === 'kept' || key === 'waiting') return;
+      if (Array.isArray(entry[key])) {
+        copy[key] = entry[key].filter(function (line) { return String(line).trim(); });
+      } else {
+        copy[key] = entry[key];
+      }
+    });
+    return copy;
+  }
+
+  function typing() {
+    var at = document.activeElement;
+    if (!at) return false;
+    var name = at.tagName;
+    return (name === 'INPUT' || name === 'TEXTAREA' || name === 'SELECT') &&
+           document.getElementById('main').contains(at);
   }
 
   function reread() {
@@ -361,14 +426,23 @@
   // ------------------------------------------------------------- painting
   function paint() {
     var main = document.getElementById('main');
+    var was = S.painted;
     main.textContent = '';
     var view = ({
       start: startView, form: formView, review: reviewView, receipt: receiptView,
       brief: briefView, conflict: conflictView, blocked: blockedView, lost: lostView
     })[S.view] || startView;
     main.appendChild(view());
+    S.painted = S.view + '/' + S.section;
     paintBars();
-    if (S.lastFocus) { var back = document.getElementById(S.lastFocus); if (back) back.focus(); S.lastFocus = null; }
+    // The screen is built again after every tap, so the control they just
+    // pressed has to be handed back to them; a new screen hands over itself.
+    var back = S.lastFocus && document.getElementById(S.lastFocus);
+    S.lastFocus = null;
+    if (back) back.focus();
+    // Reading position is set by whoever changed the screen; taking the focus
+    // must not drag the page down under the bar at the top.
+    else if (was !== S.painted) main.focus({preventScroll: true});
   }
 
   function paintBars() {
@@ -393,6 +467,8 @@
     }
     if (!bar.hidden) paintFootbar();
     paintStatus();
+    document.documentElement.style.setProperty('--footbar-h',
+      (bar.hidden ? 0 : bar.offsetHeight) + 'px');
   }
 
   function paintFootbar() {
@@ -424,24 +500,28 @@
     };
   }
 
+  function statusWords() {
+    var kind = S.status.kind;
+    if (kind === 'saved') return 'Saved · revision ' + S.status.text;
+    if (kind === 'saving' || kind === 'sending') return 'Saving…';
+    if (kind === 'device') return 'Saved on this device only — not yet sent to Savvy Sounds.';
+    if (kind === 'trouble') return 'Not saved yet — your answers are still here.';
+    return '';
+  }
+
   function paintStatus() {
     var line = document.getElementById('status');
+    var retry = document.getElementById('retrybtn');
     if (!line) return;
-    line.textContent = '';
-    line.className = 'status';
-    var kind = S.status.kind;
-    if (kind === 'saved') {
-      line.appendChild(el('span', {text: 'Saved · revision ' + S.status.text}));
-    } else if (kind === 'saving' || kind === 'sending') {
-      line.appendChild(el('span', {text: 'Saving…'}));
-    } else if (kind === 'device') {
-      line.className = 'status trouble';
-      line.appendChild(el('span', {text: 'Saved on this device only — not yet sent to Savvy Sounds. '}));
-      line.appendChild(retryButton());
-    } else if (kind === 'trouble') {
-      line.className = 'status trouble';
-      line.appendChild(el('span', {text: 'Not saved yet — your answers are still here. '}));
-      line.appendChild(retryButton());
+    var words = statusWords();
+    // This line is read out loud as it changes, so it is only written when it
+    // really says something new — not once per letter typed.
+    if (line.textContent !== words) line.textContent = words;
+    var trouble = S.status.kind === 'device' || S.status.kind === 'trouble';
+    line.className = trouble ? 'status trouble' : 'status';
+    if (retry) {
+      retry.hidden = !trouble;
+      retry.onclick = function () { send(S.view === 'review'); };
     }
   }
 
@@ -502,7 +582,7 @@
   function formView() {
     var name = sections()[S.section];
     var box = el('div', {class: 'view'});
-    box.appendChild(el('h1', {text: name, style: 'font-size:30px;text-transform:uppercase;margin:0 0 14px;'}));
+    box.appendChild(el('h1', {text: name, class: 'viewhead'}));
     var card = el('section', {class: 'card'});
     var here = inSection(name).filter(shown);
     here.forEach(function (question) { card.appendChild(questionBlock(question)); });
@@ -524,7 +604,13 @@
     if (question.required_to_submit) head.appendChild(el('span', {class: 'req', text: 'needed'}));
     block.appendChild(head);
     if (question.help) block.appendChild(el('p', {class: 'qhelp', text: question.help}));
-    block.appendChild(control(question, answer));
+    var box = control(question, answer);
+    if (bad) {
+      box.setAttribute('aria-invalid', 'true');
+      box.setAttribute('aria-describedby', 'e_' + question.id);
+    }
+    if (question.required_to_submit) box.setAttribute('aria-required', 'true');
+    block.appendChild(box);
     var states = offeredStates(question);
     if (states.length) {
       var row = el('div', {class: 'chips states', role: 'group',
@@ -533,9 +619,11 @@
       states.forEach(function (state) {
         var on = answer.state === state;
         row.appendChild(el('button', {
-          type: 'button', class: 'chip', 'aria-pressed': on ? 'true' : 'false',
+          type: 'button', class: 'chip', id: 's_' + question.id + '_' + state,
+          'aria-pressed': on ? 'true' : 'false',
           text: stateLabel(state),
           on: {click: function () {
+            S.lastFocus = 's_' + question.id + '_' + state;
             if (on) {
               var back = (S.dirty.answers[question.id] || {}).kept;
               setAnswer(question.id, isEmpty(back) ? null : back,
@@ -554,7 +642,14 @@
       block.appendChild(el('p', {class: 'qhelp',
         text: 'Your answer is with ' + ownerName(question) + ' to confirm.'}));
     }
-    if (bad) block.appendChild(el('p', {class: 'err', text: bad}));
+    if (bad) block.appendChild(el('p', {class: 'err', id: 'e_' + question.id, text: bad}));
+    // Nothing in a question put away as "Not sure yet" can be typed into, but
+    // the words stay on screen so nobody thinks the page threw them out.
+    if (answer.state !== 'confirmed' && answer.state !== 'blank') {
+      [].forEach.call(block.querySelectorAll(
+        'input, textarea, select, .chips:not(.states) button, .rows button, .moment button'),
+        function (node) { node.disabled = true; });
+    }
     return block;
   }
 
@@ -584,7 +679,7 @@
       var type = kind === 'number' ? 'number' : (kind === 'date' ? 'date' : (kind === 'email' ? 'email' : 'text'));
       var input = el('input', {id: id, type: type,
                                inputmode: kind === 'number' ? 'numeric' : null,
-                               autocomplete: 'off'});
+                               autocomplete: kind === 'email' ? 'email' : null});
       input.value = value || '';
       input.addEventListener('input', function () {
         setAnswer(question.id, input.value, input.value.trim() ? 'confirmed' : 'blank');
@@ -598,8 +693,10 @@
       (question.options || []).forEach(function (option) {
         var label = (question.option_labels || {})[option] || option;
         one.appendChild(el('button', {
-          type: 'button', class: 'chip', 'aria-pressed': picked === option ? 'true' : 'false', text: label,
+          type: 'button', class: 'chip', id: 'o_' + question.id + '_' + slug(option),
+          'aria-pressed': picked === option ? 'true' : 'false', text: label,
           on: {click: function () {
+            S.lastFocus = 'o_' + question.id + '_' + slug(option);
             setAnswer(question.id, picked === option ? null : option,
                       picked === option ? 'blank' : 'confirmed');
             paint();
@@ -614,8 +711,10 @@
       (question.options || []).forEach(function (option) {
         var on = chosen.indexOf(option) >= 0;
         many.appendChild(el('button', {
-          type: 'button', class: 'chip', 'aria-pressed': on ? 'true' : 'false', text: option,
+          type: 'button', class: 'chip', id: 'o_' + question.id + '_' + slug(option),
+          'aria-pressed': on ? 'true' : 'false', text: option,
           on: {click: function () {
+            S.lastFocus = 'o_' + question.id + '_' + slug(option);
             var next = on ? chosen.filter(function (o) { return o !== option; }) : chosen.concat([option]);
             setAnswer(question.id, next, next.length ? 'confirmed' : 'blank');
             paint();
@@ -688,9 +787,9 @@
       var on = !!moment.active;
       var card = el('div', {class: 'moment'});
       card.appendChild(el('button', {
-        type: 'button', class: 'chip', 'aria-pressed': on ? 'true' : 'false',
+        type: 'button', class: 'chip', id: 'm_' + kind, 'aria-pressed': on ? 'true' : 'false',
         text: moment.label || titled(kind),
-        on: {click: function () { setMoment(kind, {active: !on}); paint(); }}
+        on: {click: function () { S.lastFocus = 'm_' + kind; setMoment(kind, {active: !on}); paint(); }}
       }));
       if (on) {
         var times = el('div', {class: 'times'});
@@ -715,7 +814,7 @@
   // ------------------------------------------------------------- review
   function reviewView() {
     var box = el('div', {class: 'view'});
-    box.appendChild(el('h1', {text: 'Before you send', style: 'font-size:30px;text-transform:uppercase;margin:0 0 6px;'}));
+    box.appendChild(el('h1', {text: 'Before you send', class: 'viewhead'}));
     box.appendChild(el('p', {class: 'muted', text: 'Read it back. Anything can still change after you send.'}));
 
     var gaps = missing();
@@ -763,6 +862,13 @@
       here.forEach(function (question) {
         var answer = answerOf(question.id);
         var row = el('div', {class: 'ans'}, [el('div', {class: 'k', text: question.label})]);
+        if (question.type === 'moments') {
+          var picked = momentLines();
+          row.appendChild(el('div', {class: picked.length ? 'v' : 'v open',
+                                     text: picked.length ? picked.join('\n') : 'Not answered'}));
+          card.appendChild(row);
+          return;
+        }
         if (answer.state === 'confirmed' && !isEmpty(answer.value)) {
           row.appendChild(el('div', {class: 'v', text: readable(question, answer.value)}));
         } else if (answer.state === 'blank') {
@@ -777,6 +883,21 @@
       box.appendChild(card);
     });
     return box;
+  }
+
+  // The parts of the night live beside the answers, not among them, so the
+  // review and the copy have to go and read them.
+  function momentLines() {
+    var lines = [];
+    questions().forEach(function (question) {
+      if (question.type !== 'moments') return;
+      (question.options || []).forEach(function (kind) {
+        var moment = momentFor(kind);
+        if (!moment.active) return;
+        lines.push((moment.label || titled(kind)) + ' — ' + momentClock(moment));
+      });
+    });
+    return lines;
   }
 
   function jumpTo(question) {
@@ -813,8 +934,8 @@
     var receipt = S.receipt || {};
     var box = el('div', {class: 'view'});
     add(box, troubleNote());
+    box.appendChild(el('h1', {class: 'viewhead', text: 'Sent'}));
     box.appendChild(el('div', {class: 'card'}, [
-      el('h2', {text: 'Sent'}),
       el('p', {text: 'Saved as revision ' + receipt.revision + ' — thank you.'}),
       el('p', {class: 'muted', text: receipt.name || eventName()}),
       el('div', {class: 'btns'}, [
@@ -827,11 +948,12 @@
     var text = plainAnswers();
     var copy = el('div', {class: 'card'}, [
       el('h3', {text: 'Keep a copy'}),
-      el('p', {class: 'qhelp', id: 'copyword',
+      el('p', {class: 'qhelp', id: 'copyword', role: 'status',
                text: 'Your answers in plain words — copy them wherever you keep things.'}),
       el('button', {type: 'button', class: 'btn plain', text: 'Copy the answers',
                     on: {click: function (e) { copyOut(text, e.target); }}}),
-      el('pre', {class: 'copy', id: 'plaincopy', text: text})
+      el('pre', {class: 'copy', id: 'plaincopy', tabindex: '0', role: 'group',
+                 'aria-label': 'Your answers in plain words', text: text})
     ]);
     box.appendChild(copy);
     return box;
@@ -845,9 +967,14 @@
       lines.push(name.toUpperCase());
       here.forEach(function (question) {
         var answer = answerOf(question.id);
-        var said = answer.state === 'confirmed' && !isEmpty(answer.value)
-          ? readable(question, answer.value).replace(/\n/g, '; ')
-          : (answer.state === 'blank' ? '—' : stateLabel(answer.state));
+        var said;
+        if (question.type === 'moments') {
+          said = momentLines().join('; ') || '—';
+        } else {
+          said = answer.state === 'confirmed' && !isEmpty(answer.value)
+            ? readable(question, answer.value).replace(/\n/g, '; ')
+            : (answer.state === 'blank' ? '—' : stateLabel(answer.state));
+        }
         lines.push('  ' + question.label + ': ' + said);
       });
       lines.push('');
@@ -875,7 +1002,7 @@
       sel.removeAllRanges();
       sel.addRange(range);
     }
-    if (word) word.textContent = 'Your browser would not let the page copy. The words are selected — press command-C.';
+    if (word) word.textContent = 'Your browser would not let the page copy. The words are selected — copy them yourself.';
   }
 
   // ------------------------------------------------------------- the brief
@@ -888,7 +1015,7 @@
 
   function briefView() {
     var box = el('div', {class: 'view'});
-    box.appendChild(el('h1', {text: 'Your event brief', style: 'font-size:30px;text-transform:uppercase;margin:0 0 6px;'}));
+    box.appendChild(el('h1', {text: 'Your event brief', class: 'viewhead'}));
     add(box, troubleNote());
     if (!S.brief) {
       box.appendChild(el('p', {class: 'muted', text: 'Fetching your brief…'}));
@@ -899,17 +1026,20 @@
     box.appendChild(el('section', {class: 'card'}, [
       el('h2', {text: head.name || eventName()}),
       el('dl', {class: 'facts'}, [
-        el('dt', {text: 'Company'}), el('dd', {text: head.company || '—'}),
-        el('dt', {text: 'Date'}), el('dd', {text: head.date || 'Not settled yet'}),
-        el('dt', {text: 'Where'}), el('dd', {text: head.venue || '—'})
+        el('dt', {text: labelOf('company')}), el('dd', {text: head.company || '—'}),
+        el('dt', {text: labelOf('event_date')}), el('dd', {text: dateWords(head.date)}),
+        el('dt', {text: labelOf('venue')}), el('dd', {text: head.venue || '—'})
       ]),
       el('p', {class: 'qhelp', style: 'margin-top:10px',
-               text: 'Every time below is the time on the clock at your event (' + (head.tz || '') + ').'}),
+               text: 'Every time below is the time on the clock in ' + placeOf(head.tz) + '.'}),
       S.brief.next_action ? el('p', {class: 'note good', text: S.brief.next_action}) : null
     ]));
 
     var moments = (S.brief.moments || []).slice().sort(function (a, b) {
-      return String(a.date || '') + String(a.start || '') > String(b.date || '') + String(b.start || '') ? 1 : -1;
+      // A part of the night with no time yet goes at the end, not the front.
+      var first = (a.start ? '0' : '1') + String(a.date || '') + String(a.start || '');
+      var second = (b.start ? '0' : '1') + String(b.date || '') + String(b.start || '');
+      return first < second ? -1 : (first > second ? 1 : 0);
     });
     if (moments.length) {
       var order = el('section', {class: 'card'}, [el('h3', {text: 'The order of the night'})]);
@@ -959,6 +1089,22 @@
     return box;
   }
 
+  function labelOf(qid) {
+    var found = qid;
+    questions().forEach(function (question) { if (question.id === qid) found = question.label; });
+    return found;
+  }
+
+  // 2026-11-06 is how it is stored; a person reads the day and the month.
+  function dateWords(ymd) {
+    var bits = String(ymd || '').split('-');
+    if (bits.length !== 3) return 'Not settled yet';
+    var when = new Date(Number(bits[0]), Number(bits[1]) - 1, Number(bits[2]));
+    if (isNaN(when.getTime())) return ymd;
+    return when.toLocaleDateString(undefined,
+      {weekday: 'long', month: 'long', day: 'numeric', year: 'numeric'});
+  }
+
   function backHome() {
     return el('div', {class: 'btns'}, [
       el('button', {type: 'button', class: 'btn plain', text: 'Back to your answers',
@@ -969,10 +1115,26 @@
   function momentClock(moment) {
     var start = moment.start || '';
     var end = moment.end || '';
-    if (!start && !end) return 'Time not set';
-    if (!end || end === start) return start;
+    if (!start && !end) return 'No time yet';
+    if (!end || end === start) return clock(start);
     var crosses = end < start;
-    return start + ' to ' + end + (crosses ? ' the next morning' : '');
+    return clock(start) + ' to ' + clock(end) + (crosses ? ', into the next day' : '');
+  }
+
+  // 19:30 is how the event stores it; 7:30 PM is how a room says it.
+  function clock(hhmm) {
+    var bits = String(hhmm).split(':');
+    var hour = Number(bits[0]);
+    if (bits.length < 2 || isNaN(hour)) return String(hhmm);
+    var suffix = hour < 12 ? 'AM' : 'PM';
+    var shown = hour % 12;
+    return (shown === 0 ? 12 : shown) + ':' + bits[1] + ' ' + suffix;
+  }
+
+  // "America/Los_Angeles" is a file name for a clock; the place is the word.
+  function placeOf(zone) {
+    var tail = String(zone || '').split('/').pop();
+    return tail ? tail.split('_').join(' ') : 'your event';
   }
 
   function momentLabelOf(mid) {
@@ -1011,16 +1173,42 @@
       if (!proposal) return;
       if (proposal.by === S.me.person.person_id) return;
       if (settledBy('running_order') !== role) return;
+      var changed = [];
       Object.keys(proposal).forEach(function (attr) {
         if (['by', 'at', 'note', 'value', 'state'].indexOf(attr) >= 0) return;
-        out.push({field: 'moments.' + moment.moment_id + '.' + attr,
-                  label: (moment.label || titled(moment.kind)) + ' — ' + attr,
-                  mine: String(moment[attr] === null || moment[attr] === undefined ? '' : moment[attr]),
-                  theirs: String(proposal[attr]),
-                  by: nameOf(proposal.by), at: proposal.at});
+        // A part of the suggestion that matches what is already down is not a
+        // question for anybody.
+        if (JSON.stringify(proposal[attr]) === JSON.stringify(moment[attr])) return;
+        changed.push(attr);
       });
+      if (!changed.length) return;
+      var rest = {};
+      changed.slice(1).forEach(function (attr) { rest[attr] = proposal[attr]; });
+      out.push({field: 'moments.' + moment.moment_id + '.' + changed[0],
+                rest: rest, moment: moment,
+                label: moment.label || titled(moment.kind),
+                mine: changed.map(function (attr) { return momentSide(attr, moment[attr]); }).join('\n'),
+                theirs: changed.map(function (attr) { return momentSide(attr, proposal[attr]); }).join('\n'),
+                by: nameOf(proposal.by), at: proposal.at});
     });
     return out;
+  }
+
+  // The record's own words for a part of the night, said the way a room says
+  // them.  Anything not in here is shown as the record spells it.
+  var MOMENT_WORDS = {
+    start: 'when it starts', end: 'when it ends', date: 'the day',
+    active: 'whether it happens', label: 'what it is called', room: 'the room',
+    purpose: 'what it is for', cue_text: 'the words that start and stop the music',
+    pronunciation: 'how the names are said', duration_min: 'how long it runs'
+  };
+
+  function momentWord(attr) { return MOMENT_WORDS[attr] || attr; }
+
+  function momentSide(attr, value) {
+    var said = (attr === 'start' || attr === 'end') ? clock(value)
+      : (value === null || value === undefined || value === '' ? '—' : String(value));
+    return momentWord(attr) + ': ' + said;
   }
 
   function nameOf(personId) {
@@ -1043,25 +1231,41 @@
     ]);
     block.appendChild(el('div', {class: 'btns'}, [
       el('button', {type: 'button', class: 'btn go', text: 'Take ' + firstWord(item.by) + "'s",
-                    on: {click: function () { settle(item.field, 'proposal'); }}}),
+                    on: {click: function () { settle(item, 'proposal'); }}}),
       el('button', {type: 'button', class: 'btn plain', text: 'Keep it as it is',
-                    on: {click: function () { settle(item.field, 'current'); }}})
+                    on: {click: function () { settle(item, 'current'); }}})
     ]));
     return block;
   }
 
-  function settle(field, take) {
+  function settle(item, take) {
     door('POST', '/api/events/' + S.me.event_id + '/resolve',
-         {field: field, take: take,
-          submission_id: 'sub_' + Math.random().toString(16).slice(2) + Date.now().toString(16)})
+         {field: item.field, take: take, submission_id: attemptId()})
       .then(function (reply) {
-        if (reply.status === 200 && reply.data && reply.data.ok) {
-          S.status = {kind: 'saved', text: String(reply.data.revision)};
-          return reread().then(loadBrief);
+        if (reply.status !== 200 || !reply.data || !reply.data.ok) {
+          S.status = {kind: 'trouble', text: ''};
+          paint();
+          return;
         }
-        S.status = {kind: 'trouble', text: ''};
-        paint();
+        S.status = {kind: 'saved', text: String(reply.data.revision)};
+        var more = item.rest && Object.keys(item.rest);
+        if (take === 'proposal' && more && more.length) {
+          // Settling one part of a suggestion puts the whole suggestion away,
+          // so the rest of what they asked for is written straight after it.
+          var patch = {moment_id: item.moment.moment_id, kind: item.moment.kind,
+                       approval: item.moment.approval};
+          more.forEach(function (attr) { patch[attr] = item.rest[attr]; });
+          return door('POST', '/api/events/' + S.me.event_id + '/save',
+                      {base_revision: reply.data.revision, submission_id: attemptId(),
+                       submit: false, answers: {}, moments: [patch]})
+            .then(function () { return reread().then(loadBrief); });
+        }
+        return reread().then(loadBrief);
       }).catch(function () { S.status = {kind: 'device', text: ''}; paint(); });
+  }
+
+  function attemptId() {
+    return 'sub_' + Math.random().toString(16).slice(2) + Date.now().toString(16);
   }
 
   function openItemBlock(item) {
@@ -1083,13 +1287,19 @@
 
   function answerItem(item, text) {
     if (!String(text || '').trim()) {
-      S.status = {kind: 'trouble', text: ''};
-      paintStatus();
+      var box = document.getElementById('oi_' + item.item_id);
+      var already = document.getElementById('oiw_' + item.item_id);
+      if (!already && box) {
+        box.parentNode.insertBefore(
+          el('p', {class: 'err', id: 'oiw_' + item.item_id,
+                   text: 'Write your answer first.'}), box.nextSibling);
+        box.setAttribute('aria-describedby', 'oiw_' + item.item_id);
+      }
+      if (box) box.focus();
       return;
     }
     door('POST', '/api/events/' + S.me.event_id + '/open-items/' + item.item_id,
-         {resolved: true, answer: text,
-          submission_id: 'sub_' + Math.random().toString(16).slice(2) + Date.now().toString(16)})
+         {resolved: true, answer: text, submission_id: attemptId()})
       .then(function (reply) {
         if (reply.status === 200 && reply.data && reply.data.ok) {
           S.status = {kind: 'saved', text: String(reply.data.revision)};
@@ -1103,7 +1313,7 @@
   // ------------------------------------------------------------- conflict
   function conflictView() {
     var box = el('div', {class: 'view'});
-    box.appendChild(el('h1', {text: 'Two answers', style: 'font-size:30px;text-transform:uppercase;margin:0 0 6px;'}));
+    box.appendChild(el('h1', {text: 'Two answers', class: 'viewhead'}));
     box.appendChild(el('p', {class: 'muted',
       text: 'Somebody else changed the same thing while you were writing. Pick one of each, then send again.'}));
     var picks = {};
@@ -1183,17 +1393,15 @@
   // ------------------------------------------------------------- refusals
   function blockedView() {
     return el('div', {class: 'view'}, [
-      el('section', {class: 'card'}, [
-        el('h2', {text: 'This link'}),
-        el('p', {text: S.blockedWords})
-      ])
+      el('h1', {class: 'viewhead', text: 'This link'}),
+      el('section', {class: 'card'}, [el('p', {text: S.blockedWords})])
     ]);
   }
 
   function lostView() {
     return el('div', {class: 'view'}, [
+      el('h1', {class: 'viewhead', text: 'Not connected'}),
       el('section', {class: 'card'}, [
-        el('h2', {text: 'Not connected'}),
         el('p', {text: 'We cannot reach Savvy Sounds from this device right now. Nothing is lost.'}),
         el('div', {class: 'btns'}, [
           el('button', {type: 'button', class: 'btn go', text: 'Try again',
