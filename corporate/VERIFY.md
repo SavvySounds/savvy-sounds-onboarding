@@ -306,6 +306,12 @@ What it measures, and what it read on 2026-09-14:
 | who owns which decision | the three tables in `dj/dj.js` are read out of `rules.py` and compared |
 | somebody else's words | nothing on the page turns them into markup |
 
+**This walk is not yet in `corporate/run-all.sh`.** That file runs the checks,
+then the breaking-on-purpose, then `corporate/proof/walk.mjs` — the client
+page's walk, written by the other desk. A walk nobody runs is not a guard, so
+whoever owns `run-all.sh` adds a line for `walk-dj.mjs` beside it. Until then
+this one is run by hand, with the command above.
+
 ### Prove the walk can see a break
 
 Copy the file first, break it, watch the walk go red, then copy it back. Never
