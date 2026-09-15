@@ -409,7 +409,16 @@ class Doors(ServerCase):
     def test_miles_page_opens(self):
         code, page = self.call("/dj/", raw=True)
         self.assertEqual(code, 200)
-        self.assertIn("Screen coming", page)
+        self.assertIn('id="room"', page)
+        # Nothing about an event is baked into the page: it asks for the pass
+        # and then reads everything through the doors.
+        self.assertNotIn(self.dj, page)
+        self.assertNotIn(self.event_id, page)
+        for part in ("/dj/dj.css", "/dj/dj.js"):
+            self.assertIn(part, page, part)
+            code, body = self.call(part, raw=True)
+            self.assertEqual(code, 200, part)
+            self.assertTrue(body.strip(), part)
 
     def test_a_path_cannot_climb_out_of_the_page_folders(self):
         for attempt in ("/dj/../store.py", "/client/../../VERIFY.md",
