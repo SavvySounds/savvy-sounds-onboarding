@@ -76,7 +76,8 @@
     'invalid': 'Something in that is not right yet.',
     'not-your-decision': 'That one is not yours to settle.',
     'server-problem': 'The server tripped over that. Nothing was saved.',
-    'no-answer': 'The server did not answer. Nothing was saved.'
+    'no-answer': 'The server did not answer. Nothing was saved.',
+    'no-home': 'This page is not connected to its home yet.'
   };
   // How many change lines the screen shows before it offers the rest.
   var LATEST = 12;
@@ -158,26 +159,19 @@
 
   function door(path, options) {
     options = options || {};
-    var headers = { 'X-Access-Token': state.pass };
-    var sending = options.body !== undefined;
-    if (sending) headers['Content-Type'] = 'application/json';
-    return fetch(path, {
-      method: sending ? 'POST' : 'GET',
-      headers: headers,
-      body: sending ? JSON.stringify(options.body) : undefined,
+    if (!/^https?:\/\//.test(window.PREP_HOME || '')) {
+      return Promise.resolve({ code: 0, body: { ok: false, error: 'no-home' } });
+    }
+    return fetch(window.PREP_HOME, {
+      method: 'POST',
+      headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+      body: JSON.stringify({ door: path, token: state.pass, body: options.body }),
       cache: 'no-store'
     }).then(function (res) {
-      var kind = res.headers.get('Content-Type') || '';
-      if (options.raw) {
-        return res.text().then(function (text) {
-          return { code: res.status, body: text, kind: kind };
-        });
-      }
-      if (kind.indexOf('json') < 0) {
-        return { code: res.status, body: { ok: false, error: 'no-such-door' } };
-      }
-      return res.json().then(function (body) {
-        return { code: res.status, body: body };
+      return res.text().then(function (text) {
+        var data = JSON.parse(text);
+        var kind = data.kind || '';
+        return { code: data.status, body: options.raw ? data.text : data, kind: kind };
       });
     }).catch(function () {
       return { code: 0, body: { ok: false, error: 'no-answer' } };
@@ -1311,7 +1305,7 @@
 
   function refresh() {
     return door('/api/events').then(function (answer) {
-      if (answer.code === 200 && Array.isArray(answer.body)) state.events = answer.body;
+      if (answer.code === 200 && answer.body && Array.isArray(answer.body.events)) state.events = answer.body.events;
       return answer;
     });
   }

@@ -78,8 +78,8 @@ describe('Doors', {concurrency: false}, () => {
 
   test('Miles reaches every event', () => prepared((g, dj) => {
     plant(g, 'harbor-studio.json'); const answer = knock(g, '/api/events', dj);
-    assert.equal(answer.status, 200); assert.equal(Object.keys(answer).filter((key) => /^\d+$/.test(key)).length, 2);
-    assert.ok(answer[0].next_action);
+    assert.equal(answer.status, 200); assert.equal(answer.events.length, 2);
+    assert.ok(answer.events[0].next_action);
   }));
 
   test('a client cannot read the list of all events', () => prepared((g, dj, {tokens}) => {
@@ -151,7 +151,7 @@ describe('Doors', {concurrency: false}, () => {
     for (const people of [[{name: 'Priya Raman', role: 'contact', email: 'priya@example.com'}], []]) {
       const answer = knock(g, '/api/dj/events', dj, {people}); assert.equal(answer.status, 422); assert.ok(answer.errors[0].message);
     }
-    assert.equal(Object.keys(knock(g, '/api/events', dj)).filter((key) => /^\d+$/.test(key)).length, 0);
+    assert.equal(knock(g, '/api/events', dj).events.length, 0);
   }));
 
   test('two people cannot share one role and lose a link', () => withApp((g, dj) => {
@@ -173,11 +173,11 @@ describe('Doors', {concurrency: false}, () => {
   }));
 
   test('marking an event as looked at clears what changed', () => prepared((g, dj, {event, tokens}) => {
-    let row = Object.values(knock(g, '/api/events', dj)).find((value) => value && value.event_id === event.event_id); assert.ok(row.changed_since_seen > 0);
+    let row = knock(g, '/api/events', dj).events.find((value) => value && value.event_id === event.event_id); assert.ok(row.changed_since_seen > 0);
     assert.equal(knock(g, '/api/dj/seen', dj, {event_id: event.event_id, revision: row.revision}).dj_seen_revision, row.revision);
-    row = Object.values(knock(g, '/api/events', dj)).find((value) => value && value.event_id === event.event_id); assert.equal(row.changed_since_seen, 0);
+    row = knock(g, '/api/events', dj).events.find((value) => value && value.event_id === event.event_id); assert.equal(row.changed_since_seen, 0);
     knock(g, `/api/events/${event.event_id}/save`, tokens.approver, {base_revision: row.revision, submission_id: 'sub_after', answers: {crowd_notes: {value: 'Loud room, after.', state: 'confirmed'}}});
-    row = Object.values(knock(g, '/api/events', dj)).find((value) => value && value.event_id === event.event_id); assert.equal(row.changed_since_seen, 1);
+    row = knock(g, '/api/events', dj).events.find((value) => value && value.event_id === event.event_id); assert.equal(row.changed_since_seen, 1);
   }));
 
   test('the bookmark never runs past where the event is or moves back', () => prepared((g, dj, {event}) => {

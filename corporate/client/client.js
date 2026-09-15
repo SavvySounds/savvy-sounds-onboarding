@@ -31,13 +31,11 @@
 
   // ------------------------------------------------------------ the link
   function takeToken() {
-    var hit = location.pathname.match(/^\/c\/([0-9a-f]{32})$/);
+    var hit = location.hash.slice(1).match(/^[0-9a-f]{32}$/);
     if (hit) {
-      S.token = hit[1];
+      S.token = hit[0];
       remember('token', S.token);
-      // The door serves this page at /c — with the slash on the end it is a
-      // page nobody has, so a refresh at that address would find nothing.
-      history.replaceState(null, '', '/c');
+      history.replaceState(null, '', location.pathname);
       return;
     }
     S.token = recall('token') || '';
@@ -66,14 +64,18 @@
 
   // ------------------------------------------------------------ the doors
   function door(method, path, body) {
-    var opts = {method: method, headers: {'X-Access-Token': S.token}};
-    if (body) {
-      opts.headers['Content-Type'] = 'application/json';
-      opts.body = JSON.stringify(body);
+    if (!/^https?:\/\//.test(window.PREP_HOME || '')) {
+      return Promise.resolve({status: 0, data: {ok: false, error: 'no-home'}});
     }
-    return fetch(path, opts).then(function (res) {
-      return res.json().catch(function () { return null; }).then(function (data) {
-        return {status: res.status, data: data};
+    return fetch(window.PREP_HOME, {
+      method: 'POST',
+      headers: {'Content-Type': 'text/plain;charset=utf-8'},
+      body: JSON.stringify({door: path, token: S.token, body: body}),
+      cache: 'no-store'
+    }).then(function (res) {
+      return res.text().then(function (text) {
+        var data = JSON.parse(text);
+        return {status: data.status, data: data};
       });
     });
   }
@@ -1415,7 +1417,8 @@
   var REFUSALS = {
     'link-expired': 'This link has expired — ask Miles for a fresh one.',
     'not-your-event': 'This link is for a different event — ask Miles for a fresh one.',
-    'no-such-event': 'We cannot find that event — ask Miles for a fresh link.'
+    'no-such-event': 'We cannot find that event — ask Miles for a fresh link.',
+    'no-home': 'This page is not connected to its home yet.'
   };
 
   function blocked(word) {

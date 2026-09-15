@@ -131,7 +131,7 @@ function route(door, who, body) {
       role: who.role, expires_at: who.expires_at}];
   }
   if (door === "/api/events") return who.role === "dj" ?
-    [200, list_events().map(summarise)] : [403, {ok: false, error: "not-allowed"}];
+    [200, {ok: true, events: list_events().map(summarise)}] : [403, {ok: false, error: "not-allowed"}];
 
   if (door === "/api/dj/events") {
     if (who.role !== "dj") return [403, {ok: false, error: "not-allowed"}];

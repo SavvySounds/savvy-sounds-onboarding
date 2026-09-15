@@ -6,7 +6,7 @@
  *
  *   import { launch } from './cdp.mjs';
  *   const page = await launch({ width: 390, height: 844, scratch });
- *   await page.open('http://127.0.0.1:8792/c/<token>');   // first load thrown away
+ *   await page.open('http://127.0.0.1:8792/corporate/client/#<token>');   // first load thrown away
  *   await page.click('#nextbtn');
  *   await page.shot(framesDir + '/client-start.png');
  *   await page.close();
@@ -182,6 +182,14 @@ export async function launch({ width = 1440, height = 900, scratch } = {}) {
   }
 
   async function navigate(url) {
+    // A link that ends in #token is a same-document hop when the page is
+    // already open at that address, and Chrome fires no load for it. Leave
+    // the page first so every open is a real load.
+    if (url.includes('#')) {
+      const left = once('Page.loadEventFired');
+      await send('Page.navigate', { url: 'about:blank' });
+      await left;
+    }
     const loaded = once('Page.loadEventFired');
     await send('Page.navigate', { url });
     await loaded;

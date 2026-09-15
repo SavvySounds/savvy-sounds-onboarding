@@ -50,14 +50,14 @@ function run(cmd, args, env = {}, inherit = false) {
 }
 
 async function seed() {
-  return run('python3', ['corporate/seed.py'], { CORP_DATA: data });
+  return run('node', ['corporate/script/seed.mjs'], { CORP_DATA: data });
 }
 
 async function waitForServer() {
   for (let tries = 0; tries < 100; tries += 1) {
     try {
-      const reply = await fetch(`http://127.0.0.1:${PORT}/api/me`);
-      if (reply.status) return;
+      const reply = await fetch(`http://127.0.0.1:${PORT}/corporate/client/`);
+      if (reply.status === 200) return;
     } catch { await sleep(100); }
   }
   throw new Error(`server never answered on ${PORT}`);
@@ -81,8 +81,9 @@ function seededState() {
   const access = JSON.parse(readFileSync(join(data, 'access.json'), 'utf8'));
   const grants = Object.entries(access.tokens);
   const tokenFor = (person) => (grants.find(([, grant]) => grant.person_id === person) || [])[0];
-  const events = readdirSync(join(data, 'events')).filter((name) => name.endsWith('.json'))
-    .map((name) => JSON.parse(readFileSync(join(data, 'events', name), 'utf8')));
+  // The drive folder is flat: ev_<id>.json beside ev_<id>.changes.jsonl and access.json.
+  const events = readdirSync(data).filter((name) => /^ev_[0-9a-f]{10}\.json$/.test(name))
+    .map((name) => JSON.parse(readFileSync(join(data, name), 'utf8')));
   return {
     access, tokenFor,
     northstar: events.find((event) => nameOf(event).includes('Northstar')),
@@ -91,13 +92,12 @@ function seededState() {
 }
 
 async function door(token, path, body, text = false) {
-  const options = { method: body ? 'POST' : 'GET', headers: { 'X-Access-Token': token } };
-  if (body) {
-    options.headers['Content-Type'] = 'application/json';
-    options.body = JSON.stringify(body);
-  }
-  const reply = await fetch(`http://127.0.0.1:${PORT}${path}`, options);
-  return { status: reply.status, data: text ? await reply.text() : await reply.json() };
+  const reply = await fetch(`http://127.0.0.1:${PORT + 3}/macros/s/local/exec`, {
+    method: 'POST', headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+    body: JSON.stringify({ door: path, token, body })
+  });
+  const data = await reply.json();
+  return { status: data.status, data: text ? data.text : data };
 }
 
 async function clickWords(page, words, starts = false) {
@@ -127,7 +127,7 @@ async function closePage(page) {
 async function openPlanner(width, token, eventId, change) {
   const page = await newPage(width, width === 390 ? 844 : 900);
   try {
-    await page.open(`http://127.0.0.1:${PORT}/c/${token}`);
+    await page.open(`http://127.0.0.1:${PORT}/corporate/client/#${token}`);
     await page.waitFor("document.querySelector('.view')", { what: 'the planner page' });
     if (change) {
       await page.evaluate(`(() => {
@@ -135,8 +135,10 @@ async function openPlanner(width, token, eventId, change) {
         const live = window.fetch;
         window.fetch = function (url, options) {
           const answer = live.apply(this, arguments);
-          if (String(url).endsWith('/save')) answer.then((reply) => reply.clone().json()
-            .then((data) => window.__gateSaves.push({status: reply.status, data})).catch(() => {}));
+          let sent = null;
+          try { sent = JSON.parse(options.body); } catch (e) {}
+          if (sent && sent.door.endsWith('/save')) answer.then((reply) => reply.clone().json()
+            .then((data) => window.__gateSaves.push({status: data.status, data})).catch(() => {}));
           return answer;
         };
         return true;
@@ -190,13 +192,13 @@ async function openPlanner(width, token, eventId, change) {
 async function openMiles(width, pass, eventId, resolveProposal) {
   const page = await newPage(width, width === 390 ? 844 : 900);
   try {
-    await page.open(`http://127.0.0.1:${PORT}/dj/`);
+    await page.open(`http://127.0.0.1:${PORT}/corporate/dj/`);
     await page.click('#pass');
     await page.type(pass);
     await clickWords(page, 'Open my events');
     await page.waitFor("document.querySelector('.event-open')", { what: 'Miles event list' });
     const overview = await door(pass, '/api/events');
-    const row = overview.data.find((event) => event.event_id === eventId);
+    const row = overview.data.events.find((event) => event.event_id === eventId);
     check(`Miles sees the planner change as unseen at ${width}px`, row.changed_since_seen > 0,
           `${row.changed_since_seen} changes`);
     const opener = await page.evaluate(`(() => {
@@ -235,7 +237,7 @@ function unsafeCsvCell(csv) {
 async function approverAndExports(token, pass, eventId) {
   const page = await newPage(390, 844);
   try {
-    await page.open(`http://127.0.0.1:${PORT}/c/${token}`);
+    await page.open(`http://127.0.0.1:${PORT}/corporate/client/#${token}`);
     await page.waitFor("document.querySelector('.view')", { what: 'Theo’s page' });
     await clickWords(page, 'See your event brief');
     await page.waitFor("document.body.innerText.toLowerCase().includes('your event brief')", { what: 'Theo’s brief' });
@@ -262,7 +264,7 @@ async function approverAndExports(token, pass, eventId) {
 async function harborReceipt(token, eventId) {
   const page = await newPage(390, 844);
   try {
-    await page.open(`http://127.0.0.1:${PORT}/c/${token}`);
+    await page.open(`http://127.0.0.1:${PORT}/corporate/client/#${token}`);
     await page.waitFor("document.querySelector('.view')", { what: 'Harbor form' });
     await clickWords(page, 'Continue');
     for (let guard = 0; guard < 12; guard += 1) {
@@ -329,7 +331,7 @@ async function main() {
   process.on('SIGTERM', () => { cleanUp().finally(() => process.exit(143)); });
   try {
     await seed();
-    server = spawn('python3', ['corporate/server.py'], {
+    server = spawn('node', ['corporate/script/standin.mjs'], {
       cwd: BENCH, env: { ...process.env, CORP_PORT: String(PORT), CORP_DATA: data },
       stdio: 'ignore'
     });

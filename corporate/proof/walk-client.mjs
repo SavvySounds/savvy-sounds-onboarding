@@ -59,15 +59,15 @@ function run(cmd, args, env) {
 const started = new Set();
 
 async function startServer(port, data) {
-  const child = spawn('python3', [join(CORPORATE, 'server.py')],
+  const child = spawn('node', [join(CORPORATE, 'script', 'standin.mjs')],
     { cwd: TOP, env: { ...process.env, CORP_PORT: String(port), CORP_DATA: data },
       stdio: ['ignore', 'pipe', 'pipe'] });
   started.add(child);
   const until = Date.now() + 15000;
   while (Date.now() < until) {
     try {
-      const answer = await fetch(`http://127.0.0.1:${port}/api/me`, { headers: { 'X-Access-Token': 'x' } });
-      if (answer.status) return child;
+      const answer = await fetch(`http://127.0.0.1:${port}/corporate/client/`);
+      if (answer.status === 200) return child;
     } catch { await sleep(100); }
   }
   child.kill('SIGKILL');
@@ -94,7 +94,7 @@ function readLinks(printed) {
   const events = [];
   let here = null;
   for (const line of printed.split('\n')) {
-    const grant = line.match(/^ {2}(.+?) {2,}(approver|planner|production|contact) +http:\/\/[^/]+\/c\/([0-9a-f]{32})/);
+    const grant = line.match(/^ {2}(.+?) {2,}(approver|planner|production|contact) +http:\/\/[^/]+\/corporate\/client\/#([0-9a-f]{32})/);
     const pass = line.match(/carry: {2}([0-9a-f]{32})/);
     if (pass) { events.dj = pass[1]; continue; }
     if (grant && here) { here.people.push({ name: grant[1].trim(), role: grant[2], token: grant[3] }); continue; }
@@ -108,10 +108,12 @@ function readLinks(printed) {
 }
 
 async function door(base, token, path, body) {
-  const options = { method: body ? 'POST' : 'GET', headers: { 'X-Access-Token': token } };
-  if (body) { options.headers['Content-Type'] = 'application/json'; options.body = JSON.stringify(body); }
-  const answer = await fetch(base + path, options);
-  return { status: answer.status, data: await answer.json().catch(() => null) };
+  const answer = await fetch(`http://127.0.0.1:${Number(new URL(base).port) + 3}/macros/s/local/exec`, {
+    method: 'POST', headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+    body: JSON.stringify({ door: path, token, body })
+  });
+  const data = await answer.json().catch(() => null);
+  return { status: data && data.status, data };
 }
 
 // --------------------------------------------------------------- page hands
@@ -133,8 +135,10 @@ async function watchFetch(page) {
       window.__sent.push(note);
       const answer = real.apply(this, arguments);
       answer.then(function (res) {
-        note.status = res.status;
-        res.clone().text().then(function (text) { note.said = text.slice(0, 400); }, function () {});
+        res.clone().text().then(function (text) {
+          note.said = text.slice(0, 400);
+          try { note.status = JSON.parse(text).status; } catch (e) { note.status = 0; }
+        }, function () {});
       }, function () { note.status = -1; });
       return answer;
     };
@@ -359,7 +363,7 @@ async function walk({ fixture, width, height, keepMine }) {
   let server = null;
   let page = null;
   try {
-    const printed = await run('python3', [join(CORPORATE, 'seed.py')], { CORP_DATA: data });
+    const printed = await run('node', [join(CORPORATE, 'script', 'seed.mjs')], { CORP_DATA: data });
     const events = readLinks(printed);
     const wanted = events.find((e) => e.name.toLowerCase().includes(fixture));
     if (!wanted) throw new Error(`no practice event called ${fixture}`);
@@ -367,19 +371,19 @@ async function walk({ fixture, width, height, keepMine }) {
     const djPass = events.dj;
     if (!shared) server = await startServer(port, data);
     else {
-      const ready = await fetch(`${base}/api/me`, { headers: { 'X-Access-Token': 'x' } });
-      if (!ready.status) throw new Error('the shared server did not answer');
+      const ready = await fetch(`${base}/corporate/client/`);
+      if (ready.status !== 200) throw new Error('the shared server did not answer');
     }
 
     page = await launch({ width, height, scratch: process.env.CORP_WALK_SCRATCH || undefined });
-    const world = await page.open(`${base}/c/${approver.token}`);
+    const world = await page.open(`${base}/corporate/client/#${approver.token}`);
     check(`${tag} · the private link opens on a settled ${width}-wide screen`,
           world.vis === 'visible' && world.w === width, `${world.w}x${world.h}, ${world.vis}`);
     await page.waitFor("document.querySelector('.view')", { what: 'the first screen' });
     await watchFetch(page);
 
-    const where = await page.evaluate('location.pathname');
-    check(`${tag} · the address bar keeps no private link`, where === '/c', where);
+    const where = await page.evaluate('location.pathname + location.hash');
+    check(`${tag} · the address bar keeps no private link`, where === '/corporate/client/', where);
 
     const me = await door(base, approver.token, '/api/me');
     const eventId = me.data.event_id;
@@ -449,7 +453,7 @@ async function walk({ fixture, width, height, keepMine }) {
     // ---- a refresh mid-form brings the draft back -----------------------
     await gotoSection(page, 2);
     await writeAnswer(page, 'crowd_notes', 'Typed and not yet sent.');
-    await page.navigate(`${base}/c`);                  // straight back in, no save
+    await page.navigate(`${base}/corporate/client/`);  // straight back in, no save
     await page.waitFor("document.querySelector('.view')");
     await watchFetch(page);
     await gotoSection(page, 2);
@@ -559,11 +563,11 @@ async function walk({ fixture, width, height, keepMine }) {
         const live = window.fetch;
         let cut = false;
         window.fetch = function (url, options) {
-          if (!cut && String(url).endsWith('/save')) {
+          let sent = null;
+          try { sent = JSON.parse(options.body); } catch (e) {}
+          if (!cut && sent && sent.door.endsWith('/save')) {
             cut = true;
-            let body = null;
-            try { body = JSON.parse(options.body); } catch (e) {}
-            window.__sent.push({url: String(url), method: 'POST', body: body, status: -1});
+            window.__sent.push({url: String(url), method: 'POST', body: sent, status: -1});
             return Promise.reject(new Error('practice line down'));
           }
           return live.apply(this, arguments);
@@ -590,16 +594,16 @@ async function walk({ fixture, width, height, keepMine }) {
           afterRetry.answers.crowd_notes.value === 'Typed while the line was down.',
           `revision ${revisionBeforeOffline} to ${afterRetry.revision}`);
 
-    const posted = (await sent(page)).filter((s) => s.url.endsWith('/save'));
+    const posted = (await sent(page)).filter((s) => s.body && s.body.door.endsWith('/save'));
     const failedOne = posted[posted.length - 2];
     const retryOne = posted[posted.length - 1];
     check(`${tag} · Retry sends the same attempt, so nothing can land twice`,
-          failedOne && retryOne && failedOne.body.submission_id === retryOne.body.submission_id,
-          retryOne ? retryOne.body.submission_id : 'nothing was sent');
+          failedOne && retryOne && failedOne.body.body.submission_id === retryOne.body.body.submission_id,
+          retryOne ? retryOne.body.body.submission_id : 'nothing was sent');
 
     // the same attempt twice at the door: one receipt, one revision
     const again = await door(base, approver.token, `/api/events/${eventId}/save`,
-      { base_revision: afterRetry.revision, submission_id: retryOne.body.submission_id,
+      { base_revision: afterRetry.revision, submission_id: retryOne.body.body.submission_id,
         submit: false, answers: { crowd_notes: { value: 'a different thing', state: 'confirmed' } } });
     const afterAgain = (await door(base, approver.token, `/api/events/${eventId}`)).data;
     check(`${tag} · the same attempt sent twice gives the same receipt and no second revision`,
@@ -621,7 +625,7 @@ async function walk({ fixture, width, height, keepMine }) {
                          { seconds: 15, what: 'the two-answers screen' });
       clash = await page.evaluate("document.getElementById('main').innerText");
     } catch (never) {
-      const last = (await sent(page)).filter((s) => s.url.endsWith('/save')).pop();
+      const last = (await sent(page)).filter((s) => s.body && s.body.door.endsWith('/save')).pop();
       clash = 'no two-answers screen. status line: ' + (await statusLine(page)).trim() +
               ' — the door answered ' + (last && last.status) + ', on screen: ' +
               (await page.evaluate("document.getElementById('main').innerText")).replace(/\n+/g, ' | ').slice(0, 160);
@@ -648,7 +652,7 @@ async function walk({ fixture, width, height, keepMine }) {
           settled.revision > afterAgain.revision, `revision ${afterAgain.revision} to ${settled.revision}`);
 
     // ---- a link that does not work ---------------------------------------
-    await page.navigate(`${base}/c/00000000000000000000000000000000`);
+    await page.navigate(`${base}/corporate/client/#00000000000000000000000000000000`);
     await page.waitFor("document.getElementById('main').innerText.indexOf('link') >= 0",
                        { seconds: 10, what: 'the words about the link' });
     const refused = await page.evaluate("document.getElementById('main').innerText");
@@ -679,7 +683,7 @@ async function walk({ fixture, width, height, keepMine }) {
 
       const theirs = await launch({ width, height, scratch: process.env.CORP_WALK_SCRATCH || undefined });
       try {
-        await theirs.open(`${base}/c/${planner.token}`);
+        await theirs.open(`${base}/corporate/client/#${planner.token}`);
         await theirs.waitFor("document.querySelector('.view')");
         await pressWords(theirs, 'See your event brief');
         await theirs.waitFor("document.getElementById('main').innerText.indexOf('Two answers to settle') >= 0",
@@ -736,7 +740,7 @@ async function walk({ fixture, width, height, keepMine }) {
     const still = await launch({ width, height, scratch: process.env.CORP_WALK_SCRATCH || undefined });
     try {
       await still.media([{ name: 'prefers-reduced-motion', value: 'reduce' }]);
-      await still.open(`${base}/c/${approver.token}`);
+      await still.open(`${base}/corporate/client/#${approver.token}`);
       await still.waitFor("document.querySelector('.view')");
       const asked = await still.evaluate("matchMedia('(prefers-reduced-motion: reduce)').matches");
       const straightaway = await still.evaluate(`(() => {

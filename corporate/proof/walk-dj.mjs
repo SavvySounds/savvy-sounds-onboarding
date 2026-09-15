@@ -344,7 +344,7 @@ async function main() {
   }
 
   // --- its own store, its own server -------------------------------------
-  const seeded = await run('python3', ['corporate/seed.py'],
+  const seeded = await run('node', ['corporate/script/seed.mjs'],
     { cwd: BENCH, env: { ...process.env, CORP_DATA: store } });
   const pass = (seeded.match(/pass[^:]*:\s*([0-9a-f]{32})/i) || [])[1];
   // One block per event, so a link is never picked up under the wrong event.
@@ -354,7 +354,7 @@ async function main() {
   let blockName = '';
   for (const line of seeded.split('\n')) {
     if (/^\S/.test(line)) blockName = line.trim();
-    const found = line.match(/^\s{2}(\S.*?)\s{2,}(\w+)\s+\S+\/c\/([0-9a-f]{32})/);
+    const found = line.match(/^\s{2}(\S.*?)\s{2,}(\w+)\s+\S+\/corporate\/client\/#([0-9a-f]{32})/);
     if (found) links[`${blockName}|${found[2]}`] = found[3];
   }
   if (!pass) refuse('the seed printed no pass for Miles, so there is nothing to walk with');
@@ -366,22 +366,23 @@ async function main() {
   };
   const approver = linkFor('Northstar', 'approver');
 
-  const server = shared ? null : spawn('python3', ['corporate/server.py'], {
+  const server = shared ? null : spawn('node', ['corporate/script/standin.mjs'], {
       cwd: BENCH, env: { ...process.env, CORP_PORT: String(port), CORP_DATA: store },
       stdio: 'ignore'
     });
   const base = `http://127.0.0.1:${port}`;
   let alive = false;
   for (let tries = 0; tries < 60 && !alive; tries += 1) {
-    try { alive = (await fetch(`${base}/dj/`)).status === 200; } catch (not_yet) { await sleep(150); }
+    try { alive = (await fetch(`${base}/corporate/client/`)).status === 200; } catch (not_yet) { await sleep(150); }
   }
   if (!alive) { if (server) server.kill(); refuse('the server never answered on its own port'); }
 
-  const asMiles = (path, options = {}) => fetch(base + path, {
-    ...options,
-    headers: { 'X-Access-Token': pass, ...(options.body ? { 'Content-Type': 'application/json' } : {}) }
-  });
-  const doors = async (path) => (await asMiles(path)).json();
+  const asMiles = async (path, options = {}) => (await fetch(
+    `http://127.0.0.1:${port + 3}/macros/s/local/exec`, {
+      method: 'POST', headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+      body: JSON.stringify({ door: path, token: pass, body: options.body })
+    })).json();
+  const doors = asMiles;
 
   const cdp = await freePort();
   const chrome = spawn(CHROME, [
@@ -409,16 +410,16 @@ async function main() {
     await page.send('Runtime.enable');
 
     // The first load of a fresh Chrome is a window that has not settled.
-    await page.goto(`${base}/dj/`);
+    await page.goto(`${base}/corporate/dj/`);
     await sleep(400);
 
     // ------------------------------------------------- the phone, at a venue
     await page.size(PHONE);
-    await page.goto(`${base}/dj/`);
+    await page.goto(`${base}/corporate/dj/`);
     await settled(page, PHONE);
 
     await gateChecks(page, base, pass);
-    const rows = await doors('/api/events');
+    const rows = (await doors('/api/events')).events;
     const northstar = rows.find((row) => row.name.includes('Northstar'));
     const harbor = rows.find((row) => row.name.includes('Harbor'));
     if (!northstar || !harbor) refuse('the two pretend events are not both in the doors');
@@ -438,7 +439,7 @@ async function main() {
 
     // ------------------------------------------------------- the desk, later
     await page.size(WIDE);
-    await page.goto(`${base}/dj/#/e/${northstar.event_id}`);
+    await page.goto(`${base}/corporate/dj/#/e/${northstar.event_id}`);
     await settled(page, WIDE);
     await page.waitFor('document.querySelectorAll("section.block").length > 3', 'the event to paint');
     await noSidewaysScroll(page, WIDE);
@@ -454,7 +455,7 @@ async function main() {
 
     // ---------------------------------------------- back to the phone, after
     await page.size(PHONE);
-    await page.goto(`${base}/dj/#/e/${northstar.event_id}`);
+    await page.goto(`${base}/corporate/dj/#/e/${northstar.event_id}`);
     await settled(page, PHONE);
     await page.waitFor('document.body.textContent.includes("8:15 PM")', 'the settled time on the phone');
     await noSidewaysScroll(page, PHONE);
@@ -769,8 +770,8 @@ async function daySheetChecks(page, cdp, eventId, asMiles) {
   mark(opened.length > 0 && after.length > before,
     `the day sheet opens in another tab — ${after.length - before} new tab, ${opened.length} of them the sheet itself`);
 
-  const sheet = await (await asMiles(`/api/events/${eventId}/daysheet`)).text();
-  const event = await (await asMiles(`/api/events/${eventId}`)).json();
+  const sheet = (await asMiles(`/api/events/${eventId}/daysheet`)).text;
+  const event = await asMiles(`/api/events/${eventId}`);
   mark(sheet.includes(`revision ${event.revision}`),
     `the sheet carries the same revision as the view — ${event.revision}`);
   mark(/snapshot of revision/.test(sheet), 'and says in words that it is a snapshot, not a live page');
@@ -818,29 +819,27 @@ async function seenChecks(page, eventId, doors, base, approverToken) {
   await page.waitFor(`Array.from(document.querySelectorAll('button')).some((b) =>
     b.textContent.trim() === 'Mark as looked at' && b.disabled)`, 'the screen to be rebuilt with nothing new');
 
-  let rows = await doors('/api/events');
+  let rows = (await doors('/api/events')).events;
   let row = rows.find((one) => one.event_id === eventId);
   is(row.changed_since_seen, 0, 'after marking it, nothing is new any more');
   const event = await doors(`/api/events/${eventId}`);
   is(event.dj_seen_revision, event.revision, 'and the bookmark is where the event is');
 
   // a client saves through their own door, the way they would from their page
-  const saved = await fetch(`${base}/api/events/${eventId}/save`, {
+  const saved = await (await fetch(`http://127.0.0.1:${Number(new URL(base).port) + 3}/macros/s/local/exec`, {
     method: 'POST',
-    headers: { 'X-Access-Token': approverToken, 'Content-Type': 'application/json',
-               Origin: base },
-    body: JSON.stringify({
-      base_revision: event.revision, submission_id: 'sub_walk_' + Date.now(),
-      answers: { crowd_notes: { value: 'Two rooms in one, all night.', state: 'confirmed' } }
-    })
-  });
+    headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+    body: JSON.stringify({ door: `/api/events/${eventId}/save`, token: approverToken,
+      body: { base_revision: event.revision, submission_id: 'sub_walk_' + Date.now(),
+        answers: { crowd_notes: { value: 'Two rooms in one, all night.', state: 'confirmed' } } } })
+  })).json();
   is(saved.status, 200, 'the client can still save from their own side');
 
-  rows = await doors('/api/events');
+  rows = (await doors('/api/events')).events;
   row = rows.find((one) => one.event_id === eventId);
   is(row.changed_since_seen, 1, 'and their one save is the one thing that is new');
 
-  await page.goto(`${base}/dj/#/`);
+  await page.goto(`${base}/corporate/dj/#/`);
   await page.waitFor('document.querySelectorAll("section.block").length > 1', 'the overview');
   const pills = await page.read(`Array.from(document.querySelectorAll('section.block')).find((b) =>
     b.textContent.includes('Northstar')).textContent`);
@@ -875,7 +874,7 @@ async function biggerTextChecks(page, base, eventId) {
   // grow with it — and still not run off the side of a phone.
   const before = await page.read('parseFloat(getComputedStyle(document.body).fontSize)');
   await page.send('Page.setFontSizes', { fontSizes: { standard: 24, fixed: 24 } });
-  await page.goto(`${base}/dj/#/e/${eventId}`);
+  await page.goto(`${base}/corporate/dj/#/e/${eventId}`);
   await page.waitFor('document.querySelectorAll("section.block").length > 3', 'the event at bigger text');
   const after = await page.read(`({
     body: parseFloat(getComputedStyle(document.body).fontSize),
@@ -890,7 +889,7 @@ async function biggerTextChecks(page, base, eventId) {
   mark(after.scroll <= after.window,
     `and nothing runs off the side at bigger text — ${after.scroll}px in a ${after.window}px window`);
   await page.send('Page.setFontSizes', { fontSizes: { standard: 16, fixed: 13 } });
-  await page.goto(`${base}/dj/#/e/${eventId}`);
+  await page.goto(`${base}/corporate/dj/#/e/${eventId}`);
   await page.waitFor('document.querySelectorAll("section.block").length > 3', 'the event back at normal text');
 }
 
@@ -908,7 +907,7 @@ async function stillWithReducedMotion(page) {
 }
 
 async function keyboardOnlyChecks(page, base, eventId) {
-  await page.goto(`${base}/dj/#/e/${eventId}`);
+  await page.goto(`${base}/corporate/dj/#/e/${eventId}`);
   await page.waitFor('document.querySelectorAll("section.block").length > 3', 'the event');
   await page.read('document.body.focus(); true');
   let landed = false;

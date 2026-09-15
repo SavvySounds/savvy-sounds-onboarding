@@ -87,7 +87,8 @@ async function scriptHome(request, response) {
       const output = g.doPost({postData: {contents: await readBody(request), type: 'text/plain'}}).getContent();
       const id = nextEcho++;
       echoes.set(String(id), output);
-      return answer(response, 302, '', {Location: `/macros/echo?id=${id}`});
+      // Google's own 302 carries the CORS header too; a browser checks every hop.
+      return answer(response, 302, '', {Location: `/macros/echo?id=${id}`, 'Access-Control-Allow-Origin': '*'});
     } catch {
       return answer(response, 500, 'script problem\n', {'Content-Type': 'text/plain; charset=utf-8'});
     }

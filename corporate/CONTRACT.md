@@ -186,7 +186,7 @@ same doors and swaps nothing else.**
 |---|---|---|
 | `GET /api/questions` | any token | `questions.json` verbatim |
 | `GET /api/me` | any token | `{ok, event_id, person:{person_id,name,role}, role, expires_at}` |
-| `GET /api/events` | dj | `[{event_id, name, company, date, tz, stage, revision, updated_at, changed_since_seen: n, needs_me: n, waiting_on_client: n, next_action}]` |
+| `GET /api/events` | dj | `{ok, events: [{event_id, name, company, date, tz, stage, revision, updated_at, changed_since_seen: n, needs_me: n, waiting_on_client: n, next_action}]}` (an object, so the hosted answer can carry `status`) |
 | `GET /api/events/<id>` | token for that event | the event record, **filtered by audience** (client audience: no `dj_notes`, no other people's emails/phones except roles+names, no `proposal.note` written by dj) |
 | `POST /api/events/<id>/save` | token for that event | see §7 |
 | `POST /api/events/<id>/resolve` | owner role of the field, or dj | `{field, take:"proposal"|"current", submission_id}` → 200 `{ok, revision}` |
