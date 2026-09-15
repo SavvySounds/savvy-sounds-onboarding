@@ -426,6 +426,7 @@ async function main() {
 
     await openEvent(page, northstar.event_id);
     await eventReadingChecks(page, await doors(`/api/events/${northstar.event_id}`), PHONE);
+    await changeListChecks(page, northstar.event_id, doors, PHONE);
     await page.shot('phone-event');
     await noSidewaysScroll(page, PHONE);
     await focusRingWalk(page, PHONE);
@@ -457,6 +458,7 @@ async function main() {
     await noSidewaysScroll(page, PHONE);
     await page.shot('phone-after-settling');
 
+    await biggerTextChecks(page, base, northstar.event_id);
     await stillWithReducedMotion(page);
     await keyboardOnlyChecks(page, base, northstar.event_id);
   } finally {
@@ -572,8 +574,8 @@ async function eventReadingChecks(page, event, want) {
     `${want.name}: the button says what it will do — "${buttons.find((w) => w.startsWith('Take')) || 'nothing like it'}"`);
   mark(buttons.some((words) => words.startsWith('Keep 20:00')),
     `${want.name}: and the other says the opposite — "${buttons.find((w) => w.startsWith('Keep')) || 'nothing like it'}"`);
-  const owner = await page.read(`document.body.textContent.includes('Jules Okafor decides this one')`);
-  mark(owner, `${want.name}: the person whose decision it is, is named`);
+  const owner = await page.read(`document.body.textContent.includes('Jules Okafor owns this part of the night')`);
+  mark(owner, `${want.name}: the person whose part of the night it is, is named`);
 
   // the night that crosses midnight
   mark(text.includes('21:30–00:30'), `${want.name}: the dancing reads 21:30–00:30`);
@@ -595,6 +597,38 @@ async function eventReadingChecks(page, event, want) {
 
   // who is waiting on whom
   mark(text.includes('Waiting on Theo'), `${want.name}: the client side is named, not "the approver"`);
+}
+
+async function changeListChecks(page, eventId, doors, want) {
+  // The form arriving is one thing that happened, shown as one line.  The
+  // arithmetic still has to add up to what the door holds, or the screen is
+  // quietly hiding history rather than folding it.
+  const all = (await doors(`/api/events/${eventId}/changes?since=0`)).changes;
+  // Both backslashes are deliberate: this pattern is written inside a template
+  // literal, and a single one is eaten on the way to the browser — the regex
+  // then matches nothing and the check reads green while seeing nothing.  It
+  // is why the count of grouped rows is asserted below, not assumed.
+  const seen = await page.read(`(() => {
+    const rows = Array.from(document.querySelectorAll('#changed .row'));
+    const together = rows
+      .map((row) => {
+        const head = row.querySelector('h3');
+        return head && (head.textContent.match(/^(\\d+) answers arrived together/) || [])[1];
+      })
+      .filter(Boolean).map(Number);
+    const more = (document.querySelector('#changed').textContent
+      .match(/Show the (\\d+) older change/) || [])[1];
+    return { rows: rows.length, together: together, hidden: Number(more || 0) };
+  })()`);
+  atLeast(seen.together.length, 1,
+    `${want.name}: the probe found the folded line it is counting`);
+  const counted = seen.rows - seen.together.length
+    + seen.together.reduce((sum, many) => sum + many, 0) + seen.hidden;
+  is(counted, all.length,
+    `${want.name}: the change list accounts for every line the door holds — ${seen.rows} rows `
+    + `(one of them ${seen.together.join('+') || 'none'} answers at once) plus ${seen.hidden} older`);
+  mark(seen.rows <= 12,
+    `${want.name}: and it is never a wall — ${seen.rows} rows on screen at once`);
 }
 
 async function noSidewaysScroll(page, want) {
@@ -816,6 +850,31 @@ async function ownItemChecks(page, eventId, doors) {
   mark(String(item.answer || '').startsWith('Something slow'), 'and what he wrote is what was kept');
   const stillThere = await page.read(`document.body.textContent.includes(${JSON.stringify(mine.question.slice(0, 30))})`);
   mark(!stillThere, 'and it is off the screen');
+}
+
+async function biggerTextChecks(page, base, eventId) {
+  // The one accessibility setting he would actually reach for: bigger text in
+  // the browser.  Sizes on this page are in rem, so the whole screen has to
+  // grow with it — and still not run off the side of a phone.
+  const before = await page.read('parseFloat(getComputedStyle(document.body).fontSize)');
+  await page.send('Page.setFontSizes', { fontSizes: { standard: 24, fixed: 24 } });
+  await page.goto(`${base}/dj/#/e/${eventId}`);
+  await page.waitFor('document.querySelectorAll("section.block").length > 3', 'the event at bigger text');
+  const after = await page.read(`({
+    body: parseFloat(getComputedStyle(document.body).fontSize),
+    head: parseFloat(getComputedStyle(document.querySelector('h1')).fontSize),
+    button: Math.round(document.querySelector('button').getBoundingClientRect().height),
+    scroll: document.documentElement.scrollWidth, window: window.innerWidth
+  })`);
+  mark(after.body > before,
+    `bigger text in the browser makes the page bigger — body went ${before}px to ${after.body}px`);
+  atLeast(after.head, after.body * 1.5, 'and the headings keep their place above the words');
+  atLeast(after.button, 44, 'and a button is still at least 44px tall');
+  mark(after.scroll <= after.window,
+    `and nothing runs off the side at bigger text — ${after.scroll}px in a ${after.window}px window`);
+  await page.send('Page.setFontSizes', { fontSizes: { standard: 16, fixed: 13 } });
+  await page.goto(`${base}/dj/#/e/${eventId}`);
+  await page.waitFor('document.querySelectorAll("section.block").length > 3', 'the event back at normal text');
 }
 
 async function stillWithReducedMotion(page) {

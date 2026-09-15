@@ -69,8 +69,8 @@
     'no-such-item': 'That question is not on this event any more.',
     'no-such-door': 'The page asked for something this server does not have.',
     'no-such-page': 'The page asked for something this server does not have.',
-    'bad-host': 'The page and the server disagree about where they are. Reload it.',
-    'bad-origin': 'The page and the server disagree about where they are. Reload it.',
+    'bad-host': 'That did not reach your Mac the way it had to. Reload the page.',
+    'bad-origin': 'That did not reach your Mac the way it had to. Reload the page.',
     'bad-json': 'The page sent something the server could not read. Nothing was saved.',
     'conflict': 'Somebody changed that while you were looking. Reload to see where it is now.',
     'invalid': 'Something in that is not right yet.',
@@ -133,6 +133,17 @@
     if (!state.refocus) return;
     state.refocus = false;
     try { sayBox.focus(); } catch (no) { /* nothing to land on */ }
+  }
+
+  function expired(answer) {
+    // A pass that has stopped working is not a failed action, it is a closed
+    // door: leaving him on a screen he can no longer refresh would be a lie.
+    if (((answer.body || {}).error) !== 'link-expired') return false;
+    state.pass = '';
+    state.event = null;
+    try { window.sessionStorage.removeItem(PASS_KEY); } catch (no) { /* private window */ }
+    gate({ words: why(answer), word: 'link-expired' });
+    return true;
   }
 
   function why(answer) {
@@ -228,8 +239,23 @@
   function asWords(value) {
     if (value === null || value === undefined) return '';
     if (Array.isArray(value)) return value.join(', ');
-    if (typeof value === 'object') return JSON.stringify(value);
+    // Never JSON.stringify onto his screen: a record he cannot read is worse
+    // than the same thing said badly in words.
+    if (typeof value === 'object') return sideWords(value);
     return String(value);
+  }
+
+  function changeWords(line, event) {
+    // The practice events are loaded rather than filled in, and the word the
+    // brain writes for that is not one he should ever read.
+    if (line.origin === 'seed' && line.field === 'event') {
+      return { what: 'this practice booking was loaded', before: '', after: '' };
+    }
+    return {
+      what: fieldWords(event, line.field),
+      before: shorten(sideWords(line.before), 60),
+      after: shorten(sideWords(line.after), 60)
+    };
   }
 
   function sideWords(side) {
@@ -328,7 +354,7 @@
     if (role === 'dj') return 'Yours to settle.';
     var person = personByRole(event, role);
     return person
-      ? (person.name + ' decides this one (' + ROLE_WORDS[role] + ').')
+      ? (person.name + ' owns this part of the night (' + ROLE_WORDS[role] + ').')
       : ('Nobody on this event is ' + ROLE_WORDS[role] + ', so it falls to you.');
   }
 
@@ -364,7 +390,10 @@
     // dictation overwrites the clipboard all day, and a "Copied" that did not
     // happen is worse here than anywhere.  Refused means the words are
     // selected instead, and the button says so.
-    var shown = el('code', { text: text, tabindex: '0' });
+    // No tabindex: this is the words beside the button, not a control.  With
+    // one it added a dead keyboard stop in front of every Copy, and reaching
+    // the last contact took thirteen presses instead of six.
+    var shown = el('code', { text: text });
     var button = el('button', {
       class: 'plain', type: 'button',
       'aria-label': 'copy ' + what,
@@ -380,7 +409,7 @@
             var picked = window.getSelection();
             picked.removeAllRanges();
             picked.addRange(range);
-            shown.focus();
+            shown.scrollIntoView({ block: 'nearest' });
           } catch (no) { /* nothing to select is still not a false Copied */ }
           fill(button, [document.createTextNode('Press ⌘C')]);
           restore();
@@ -435,7 +464,7 @@
     ]);
     fill(room, [el('div', { class: 'gate' }, [
       el('h1', { text: 'Savvy Sounds' }),
-      el('p', { text: 'Your own view of the corporate bookings. The pass stays in this window and never goes in the address bar.' }),
+      el('p', { text: 'Your own view of the corporate bookings. Your pass stays in this window: close it and it is gone.' }),
       form,
       problem ? el('div', { class: 'problem' }, [
         el('p', { text: problem.words }),
@@ -500,14 +529,16 @@
       var when = row.date ? prettyDate(row.date) : 'no date yet';
       var zone = zoneNote(row.tz);
       return el('section', { class: 'block' + (row.needs_me ? ' needs' : '') }, [
-        el('button', {
-          class: 'event-open', type: 'button',
-          onclick: function () { go('#/e/' + row.event_id); }
-        }, [
-          el('h3', { text: row.name }),
-          el('p', { class: 'quiet', text: [row.company, when + (zone ? ' · ' + zone : '')]
-            .filter(Boolean).join(' · ') })
+        // The heading stays a heading: a screen reader that lists the page's
+        // headings has to find the events, so the button goes INSIDE it.
+        el('h3', {}, [
+          el('button', {
+            class: 'event-open', type: 'button', text: row.name,
+            onclick: function () { go('#/e/' + row.event_id); }
+          })
         ]),
+        el('p', { class: 'quiet', text: [row.company, when + (zone ? ' · ' + zone : '')]
+          .filter(Boolean).join(' · ') }),
         el('div', { class: 'pills' }, [
           el('span', { class: 'pill stage', text: STAGE_WORDS[row.stage] || row.stage }),
           countPill(row.needs_me, 'needs you', 'need you', 'nothing needs you', 'needs'),
@@ -651,6 +682,13 @@
       if (name || email) people.push({ name: name, role: role, email: email });
     });
     state.problems = [];
+    if (!(draft.name || '').trim() && !(draft.company || '').trim()) {
+      // Nothing downstream refuses this, and an event with neither reads as
+      // its own id on the overview — unrecognisable beside the others.
+      state.problems = ['Give it an event name or a company, so you can tell it from the others.'];
+      say('Not started. Everything you typed is still here.', true);
+      return bookingForm();
+    }
     say('Starting it…');
     door('/api/dj/events', {
       body: {
@@ -659,6 +697,7 @@
       }
     }).then(function (answer) {
       if (answer.code !== 200 || !answer.body.ok) {
+        if (expired(answer)) return;
         var body = answer.body || {};
         state.problems = (body.errors || []).map(function (e) { return e.message; });
         if (!state.problems.length) state.problems = [why(answer)];
@@ -731,12 +770,12 @@
         el('button', {
           class: 'go', type: 'button',
           text: 'Take ' + asker + '’s ' + shorten(proposal.asked, 22),
-          onclick: function (ev) { settle(ev.target, event, proposal.field, 'proposal'); }
+          onclick: function (ev) { settle(ev.target, event, proposal.field, 'proposal', proposal); }
         }),
         el('button', {
-          type: 'button',
+          class: 'plain', type: 'button',
           text: 'Keep ' + shorten(proposal.now || 'it as it is', 22),
-          onclick: function (ev) { settle(ev.target, event, proposal.field, 'current'); }
+          onclick: function (ev) { settle(ev.target, event, proposal.field, 'current', proposal); }
         })
       ])
     ]);
@@ -824,6 +863,14 @@
     })));
   }
 
+  function answerWords(question, value) {
+    // The form's own words for a date and a zone are a machine's words.  He
+    // reads the same answer everywhere else on this page as a day and a place.
+    if (question.type === 'date') return prettyDate(value);
+    if (question.id === 'tz') return zoneWords(value) || asWords(value);
+    return asWords(value);
+  }
+
   function briefBlock(event) {
     var sections = (state.questions || {}).sections || [];
     var answers = event.answers || {};
@@ -834,7 +881,7 @@
         var answer = answers[question.id];
         if (!answer || answer.state === 'blank') return;
         var words = answer.state === 'confirmed'
-          ? asWords(answer.value)
+          ? answerWords(question, answer.value)
           : (STATE_WORDS[answer.state] || answer.state);
         rows.push(el('dt', { text: question.label }));
         rows.push(el('dd', {
@@ -882,7 +929,8 @@
 
     var rows = moments.map(function (moment) {
       var crosses = moment.start && moment.end && moment.end < moment.start;
-      var when = (moment.start || '') + (moment.end ? '–' + moment.end : '');
+      var when = (moment.start || '')
+        + (moment.end && moment.end !== moment.start ? '–' + moment.end : '');
       var minutes = moment.start && moment.end
         ? ((Number(moment.end.split(':')[0]) * 60 + Number(moment.end.split(':')[1]))
            - (Number(moment.start.split(':')[0]) * 60 + Number(moment.start.split(':')[1])) + 1440) % 1440
@@ -929,32 +977,57 @@
     ].concat(rows.length ? rows : [el('p', { text: 'No parts of the night yet.' })]));
   }
 
+  function firstAnswer(line) {
+    // An answer arriving for the first time: there was nothing there before.
+    var before = sideWords(line.before);
+    return String(line.field || '').indexOf('answers.') === 0
+      && (!before || before === STATE_WORDS.blank);
+  }
+
   function changesBlock(event) {
     var seen = Number(event.dj_seen_revision || 0);
     var lines = state.changes.slice().sort(function (a, b) {
       return (b.revision || 0) - (a.revision || 0);
     });
     var unseen = lines.filter(function (line) { return (line.revision || 0) > seen; }).length;
-    // A form that lands in one go writes forty lines at once.  He is reading
-    // this at a venue: the newest are what "what changed" means, and the rest
-    // are one button away.
-    var showing = state.showAllChanges ? lines : lines.slice(0, LATEST);
-    var hidden = lines.length - showing.length;
 
-    var rows = showing.map(function (line) {
+    // A form filled in and sent lands as forty lines in the same second, all
+    // of them "there was nothing here, now there is".  That is one thing that
+    // happened, and it reads as one line.  Everything after it is a change
+    // somebody made to an answer, which is the thing he is actually looking for.
+    var groups = [];
+    lines.forEach(function (line) {
+      var last = groups[groups.length - 1];
+      if (firstAnswer(line) && last && last.together
+          && last.at === line.at && last.actor === line.actor) {
+        last.lines.push(line);
+        return;
+      }
+      groups.push({ together: firstAnswer(line), at: line.at,
+                    actor: line.actor, lines: [line] });
+    });
+    var showing = state.showAllChanges ? groups : groups.slice(0, LATEST);
+    var hidden = groups.slice(showing.length).reduce(function (sum, group) {
+      return sum + group.lines.length;
+    }, 0);
+
+    var rows = showing.map(function (group) {
+      if (group.lines.length > 1) return arrivedTogether(event, group, seen);
+      var line = group.lines[0];
       var isNew = (line.revision || 0) > seen;
+      var words = changeWords(line, event);
       return el('div', { class: 'row' }, [
         el('div', { class: 'change' }, [
           el('div', { class: 'at', text: whenWords(line.at, event.tz) }),
           el('div', {}, [
             el('h3', {}, [
-              document.createTextNode(fieldWords(event, line.field)),
+              document.createTextNode(words.what),
               isNew ? el('span', { class: 'tag new', text: 'new' }) : null
             ]),
-            el('p', {}, [
-              el('span', { class: 'was', text: shorten(sideWords(line.before), 60) || '—' }),
-              document.createTextNode(' → ' + (shorten(sideWords(line.after), 60) || '—'))
-            ]),
+            words.after || words.before ? el('p', {}, [
+              el('span', { class: 'was', text: words.before || '—' }),
+              document.createTextNode(' → ' + (words.after || '—'))
+            ]) : null,
             el('p', { class: 'quiet', text: firstName(nameOf(event, line.actor)) +
               ((line.affected || []).length
                 ? ' · this touched ' + line.affected.map(function (mid) {
@@ -991,10 +1064,35 @@
     ));
   }
 
+  function arrivedTogether(event, group, seen) {
+    var isNew = group.lines.some(function (line) {
+      return (line.revision || 0) > seen;
+    });
+    var named = group.lines.slice(0, 6).map(function (line) {
+      return fieldWords(event, line.field);
+    }).join(', ');
+    return el('div', { class: 'row' }, [
+      el('div', { class: 'change' }, [
+        el('div', { class: 'at', text: whenWords(group.at, event.tz) }),
+        el('div', {}, [
+          el('h3', {}, [
+            document.createTextNode(group.lines.length + ' answers arrived together'),
+            isNew ? el('span', { class: 'tag new', text: 'new' }) : null
+          ]),
+          el('p', { class: 'quiet', text: named
+            + (group.lines.length > 6 ? ', and ' + (group.lines.length - 6) + ' more' : '') }),
+          el('p', { class: 'quiet', text: firstName(nameOf(event, group.actor)) })
+        ])
+      ])
+    ]);
+  }
+
   function sheetsBlock(event) {
     return el('section', { class: 'block' }, [
       el('h2', { text: 'The day sheet' }),
       el('p', { text: 'The printable sheet is made fresh when you ask for it. It prints the time it was made and which revision it came from — it is a snapshot, not a live page.' }),
+      el('p', { class: 'quiet', text: 'What you are reading here is revision ' + event.revision
+        + '. A sheet that says the same number was printed from the same answers.' }),
       el('div', { class: 'doing' }, [
         el('button', { class: 'go', type: 'button', text: 'Open the day sheet',
                        onclick: function (ev) { openSheet(ev.target, event); } }),
@@ -1065,12 +1163,12 @@
       el('p', { class: 'quiet', text: [company, date ? prettyDate(date) : 'no date yet',
         zone, venue].filter(Boolean).join(' · ') }),
       el('div', { class: 'pills' }, [
-        el('span', { class: 'pill stage', text: STAGE_WORDS[event.stage] || event.stage }),
-        el('span', { class: 'pill', text: 'revision ' + event.revision })
+        el('span', { class: 'pill stage', text: STAGE_WORDS[event.stage] || event.stage })
       ]),
       el('p', { class: 'next-action', text: event.next_action || '' }),
+      parts[0].block,
       jumpBar(parts.map(function (part) { return { id: part.id, words: part.words }; })),
-      parts[0].block, parts[1].block, parts[2].block, parts[3].block,
+      parts[1].block, parts[2].block, parts[3].block,
       parts[4].block, parts[5].block, parts[6] ? parts[6].block : null
     ]);
     landTheKeyboard();
@@ -1088,7 +1186,8 @@
     };
   }
 
-  function settle(button, event, field, take) {
+  function settle(button, event, field, take, both) {
+    both = both || {};
     var undo = busy(button, 'Settling…');
     door('/api/events/' + event.event_id + '/resolve', {
       body: { field: field, take: take,
@@ -1096,11 +1195,15 @@
     }).then(function (answer) {
       if (answer.code !== 200 || !answer.body.ok) {
         undo();
+        if (expired(answer)) return;
         return say(why(answer), true);
       }
+      // Say the numbers.  "is now what they asked for" cannot be checked by a
+      // man holding a microphone; "is now 20:15, was 20:00" can.
       say(take === 'proposal'
-        ? 'Taken. ' + fieldWords(event, field) + ' is now what they asked for.'
-        : 'Kept. ' + fieldWords(event, field) + ' stays as it was.');
+        ? 'Taken. ' + fieldWords(event, field) + ' is now ' + (both.asked || '—')
+          + ', was ' + (both.now || '—') + '.'
+        : 'Kept. ' + fieldWords(event, field) + ' stays ' + (both.now || 'as it was') + '.');
       openEvent(event.event_id);
     });
   }
@@ -1113,6 +1216,7 @@
     }).then(function (answer) {
       if (answer.code !== 200 || !answer.body.ok) {
         undo();
+        if (expired(answer)) return;
         return say(why(answer), true);
       }
       say('Answered. That one is off your list.');
@@ -1127,6 +1231,7 @@
     }).then(function (answer) {
       if (answer.code !== 200 || !answer.body.ok) {
         undo();
+        if (expired(answer)) return;
         return say(why(answer), true);
       }
       say('Marked. Anything that changes from now on shows up as new.');
@@ -1199,6 +1304,7 @@
     ]).then(function (answers) {
       var answer = answers[0];
       if (answer.code !== 200 || !answer.body.event_id) {
+        if (expired(answer)) return;
         say(why(answer), true);
         return go('#/');
       }

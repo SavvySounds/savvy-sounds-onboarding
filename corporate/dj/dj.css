@@ -40,7 +40,10 @@ body {
   margin: 0;
   background: var(--paper);
   color: var(--ink);
-  font: 16px/1.5 var(--text);
+  /* Every size on this page is in rem, so a bigger default text size in his
+     browser makes the whole screen bigger — the one accessibility setting a
+     DJ reading a phone in a dark booth actually reaches for. */
+  font: 1rem/1.5 var(--text);
   -webkit-font-smoothing: antialiased;
 }
 
@@ -57,25 +60,28 @@ body {
   position: sticky; top: 0; z-index: 50;
   background: var(--go-wash); color: var(--ink);
   border-bottom: 1px solid var(--line);
-  padding: 12px 20px; font-size: 15px;
+  padding: 12px 20px; font-size: 0.9375rem;
 }
 .say:empty { display: none; }
 .say.bad { background: var(--stop-wash); }
 
 main { max-width: 60rem; margin: 0 auto; padding: 20px 20px 96px; }
+/* A line of prose stops before it gets too long to track back to at a desk;
+   at 1440 the longest line here measured 122 characters. */
+section.block > p, .row > p, .verbatim, dl.facts dd { max-width: 68ch; }
 
 .noscript { max-width: 60rem; margin: 0 auto; padding: 20px; }
 
 /* ------------------------------------------------------------------- type */
 
 h1, h2, h3 { margin: 0; font-weight: 600; letter-spacing: .01em; }
-h1 { font-size: 26px; line-height: 1.2; }
-h2 { font-size: 13px; text-transform: uppercase; letter-spacing: .09em; color: var(--ink-2); }
-h3 { font-size: 19px; line-height: 1.3; }
+h1 { font-size: 1.625rem; line-height: 1.2; }
+h2 { font-size: 0.8125rem; text-transform: uppercase; letter-spacing: .09em; color: var(--ink-2); }
+h3 { font-size: 1.1875rem; line-height: 1.3; }
 p  { margin: 0; }
 
 .num { font-variant-numeric: tabular-nums; }
-.quiet { color: var(--ink-2); font-size: 14px; }
+.quiet { color: var(--ink-2); font-size: 0.875rem; }
 .verbatim { white-space: pre-wrap; }
 
 .masthead {
@@ -84,9 +90,9 @@ p  { margin: 0; }
   margin-bottom: 20px;
 }
 .masthead .brand {
-  font-size: 17px; font-weight: 700; text-transform: uppercase; letter-spacing: .1em;
+  font-size: 1.0625rem; font-weight: 700; text-transform: uppercase; letter-spacing: .1em;
 }
-.masthead .what { color: var(--ink-2); font-size: 14px; }
+.masthead .what { color: var(--ink-2); font-size: 0.875rem; }
 .masthead .spacer { flex: 1 1 auto; }
 
 /* ----------------------------------------------------------------- blocks */
@@ -106,11 +112,11 @@ section.block.needs { border-color: #C9A78E; }
 .row:first-of-type { border-top: 0; padding-top: 4px; }
 
 .pair { display: flex; flex-wrap: wrap; gap: 4px 18px; align-items: baseline; }
-.pair dt { color: var(--ink-2); font-size: 14px; min-width: 9.5rem; }
+.pair dt { color: var(--ink-2); font-size: 0.875rem; min-width: 9.5rem; }
 .pair dd { margin: 0; }
 
 dl.facts { margin: 0; display: grid; gap: 10px 20px; grid-template-columns: 1fr; }
-dl.facts dt { color: var(--ink-2); font-size: 14px; }
+dl.facts dt { color: var(--ink-2); font-size: 0.875rem; }
 dl.facts dd { margin: 2px 0 0; }
 @media (min-width: 40rem) {
   dl.facts { grid-template-columns: 14rem 1fr; align-items: baseline; }
@@ -123,7 +129,7 @@ dl.facts dd { margin: 2px 0 0; }
 .pill {
   display: inline-flex; align-items: center; gap: 6px;
   border-radius: var(--r-pill); padding: 5px 12px;
-  font-size: 14px; border: 1px solid var(--line);
+  font-size: 0.875rem; border: 1px solid var(--line);
   background: var(--well); color: var(--ink);
 }
 .pill b { font-variant-numeric: tabular-nums; }
@@ -133,8 +139,8 @@ dl.facts dd { margin: 2px 0 0; }
 .pill.stage { background: var(--card); }
 
 .tag {
-  display: inline-block; font-size: 12.5px; letter-spacing: .06em;
-  text-transform: uppercase; padding: 2px 8px; border-radius: var(--r-pill);
+  display: inline-block; font-size: 0.8125rem; font-weight: 600; letter-spacing: .02em;
+  padding: 3px 10px; border-radius: var(--r-pill);
   border: 1px solid currentColor; margin-left: 8px; vertical-align: 2px;
 }
 .tag.new   { color: var(--gold-ink); background: var(--gold-wash); }
@@ -144,8 +150,8 @@ dl.facts dd { margin: 2px 0 0; }
 /* --------------------------------------------------------------- controls */
 
 button, .button {
-  font: inherit; font-size: 15px;
-  min-height: 44px; padding: 10px 18px;
+  font: inherit; font-size: 0.9375rem;
+  min-height: max(44px, 2.75rem); padding: 10px 18px;
   border-radius: var(--r-well); border: 1px solid var(--line);
   background: var(--card); color: var(--gold);
   cursor: pointer;
@@ -156,7 +162,7 @@ button.go {
   font-weight: 600;
 }
 button.go:hover { background: var(--gold-ink); border-color: var(--gold-ink); }
-button.plain { background: transparent; color: var(--gold); border-color: transparent; text-decoration: underline; text-underline-offset: 3px; }
+button.plain { background: transparent; color: var(--gold-ink); border-color: transparent; text-decoration: underline; text-underline-offset: 3px; }
 button.plain:hover { border-color: var(--line); text-decoration: none; }
 button[disabled] { opacity: .55; cursor: default; }
 
@@ -172,12 +178,12 @@ a { color: var(--gold); text-underline-offset: 3px; }
 
 /* ------------------------------------------------------------------ forms */
 
-label.fld { display: block; font-size: 14px; color: var(--ink-2); margin: 14px 0 6px; }
+label.fld { display: block; font-size: 0.875rem; color: var(--ink-2); margin: 14px 0 6px; }
 label.fld .req { color: var(--gold); }
 /* Every box he types in, named by what it is not rather than by a list of
    types — the list left the pass box unstyled and 150px wide. */
 input:not([type=checkbox]):not([type=radio]), select, textarea {
-  width: 100%; font: inherit; font-size: 16px; min-height: 44px;
+  width: 100%; font: inherit; font-size: 1rem; min-height: max(44px, 2.75rem);
   color: var(--ink); background: var(--well);
   border: 1px solid var(--line); border-radius: var(--r-well);
   padding: 10px 12px;
@@ -198,24 +204,24 @@ input:focus, select:focus, textarea:focus { border-color: var(--go); }
 
 .gate { max-width: 26rem; margin: 8vh auto 0; }
 .gate h1 { margin-bottom: 8px; }
-.gate p { color: var(--ink-2); font-size: 15px; }
+.gate p { color: var(--ink-2); font-size: 0.9375rem; }
 
 /* --------------------------------------------------------------- overview */
 
 .event-open {
   display: block; width: 100%; text-align: left;
-  background: transparent; border: 0; padding: 0; min-height: 0;
-  color: var(--ink); cursor: pointer;
+  background: transparent; border: 0; padding: 6px 0; min-height: max(44px, 2.75rem);
+  font: inherit; color: var(--gold);
+  text-decoration: underline; text-underline-offset: 4px; cursor: pointer;
 }
-.event-open h3 { color: var(--gold); text-decoration: underline; text-underline-offset: 4px; }
-.event-open:hover h3 { color: var(--gold-ink); }
+.event-open:hover { color: var(--gold-ink); }
 
-.next-action { margin-top: 10px; font-size: 15px; }
+.next-action { margin-top: 10px; font-size: 0.9375rem; }
 
 /* --------------------------------------------------------------- jump bar */
 
 .jump {
-  display: flex; flex-wrap: wrap; gap: 4px 2px;
+  display: flex; flex-wrap: wrap; gap: 8px;
   margin: 14px 0 0; padding-top: 8px;
   border-top: 1px solid var(--line);
 }
@@ -228,18 +234,21 @@ input:focus, select:focus, textarea:focus { border-color: var(--go); }
   .moment { grid-template-columns: 9.5rem 1fr; }
 }
 .moment .when { font-variant-numeric: tabular-nums; font-weight: 600; }
-.moment .when .len { display: block; font-weight: 400; font-size: 14px; color: var(--ink-2); }
-.moment .what h3 { font-size: 17px; }
-.moment .what .where { color: var(--ink-2); font-size: 14px; }
+.moment .when .len { display: block; font-weight: 400; font-size: 0.875rem; color: var(--ink-2); }
+.moment .what h3 { font-size: 1.0625rem; }
+.moment .what .where { color: var(--ink-2); font-size: 0.875rem; }
 
+/* The cue and the name he says out loud are the two things on this page where
+   being wrong cannot be taken back.  They are the loudest things on it. */
 .cue {
-  background: var(--well); border-left: 4px solid var(--ink);
+  background: var(--well); border-left: 5px solid var(--ink);
   border-radius: 0 var(--r-well) var(--r-well) 0;
-  padding: 10px 12px; margin: 10px 0 0;
+  padding: 12px 14px; margin: 12px 0 0;
 }
-.cue .label { font-size: 12.5px; text-transform: uppercase; letter-spacing: .08em; color: var(--ink-2); }
-.cue .words { font-size: 17px; }
-.cue.say-it { border-left-color: var(--gold); }
+.cue .label { font-size: 0.8125rem; text-transform: uppercase; letter-spacing: .08em; color: var(--ink-2); }
+.cue .words { font-size: 1.25rem; line-height: 1.45; margin-top: 2px; }
+.cue.say-it { border-left-color: var(--gold); background: var(--gold-wash); }
+.cue.say-it .words { font-size: 1.375rem; font-weight: 600; }
 
 /* --------------------------------------------------------------- proposal */
 
@@ -247,17 +256,17 @@ input:focus, select:focus, textarea:focus { border-color: var(--go); }
 @media (min-width: 34rem) { .two-values { grid-template-columns: 1fr 1fr; } }
 .value-box {
   border: 1px solid var(--line); border-radius: var(--r-well);
-  padding: 10px 12px; background: var(--card);
+  padding: 10px 12px; background: var(--well);
 }
 .value-box.asked { background: var(--gold-wash); border-color: #DCC79A; }
-.value-box .label { font-size: 13px; color: var(--ink-2); display: block; }
-.value-box .value { font-size: 20px; font-variant-numeric: tabular-nums; }
+.value-box .label { font-size: 0.8125rem; color: var(--ink-2); display: block; }
+.value-box .value { font-size: 1.25rem; font-variant-numeric: tabular-nums; }
 
 /* ---------------------------------------------------------------- changes */
 
 .change { display: grid; gap: 2px 16px; grid-template-columns: 1fr; }
 @media (min-width: 34rem) { .change { grid-template-columns: 9.5rem 1fr; } }
-.change .at { color: var(--ink-2); font-size: 14px; font-variant-numeric: tabular-nums; }
+.change .at { color: var(--ink-2); font-size: 0.875rem; font-variant-numeric: tabular-nums; }
 .change .was { color: var(--ink-2); }
 /* A grid child's own minimum width is its longest word, so one long answer
    would push the whole page sideways on a phone.  These three lines are why
@@ -270,16 +279,16 @@ input:focus, select:focus, textarea:focus { border-color: var(--go); }
 .private {
   background: var(--gold-wash); border: 1px solid #DCC79A;
 }
-.private .only-you { color: var(--gold-ink); font-size: 14px; margin-bottom: 8px; }
+.private .only-you { color: var(--gold-ink); font-size: 0.875rem; margin-bottom: 8px; }
 
 /* ------------------------------------------------------------------ links */
 
 .link-line { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; }
 .link-line .who { min-width: 8rem; }
 .link-line code {
-  font-family: var(--data); font-size: 14px; background: var(--well);
+  font-family: var(--data); font-size: 0.875rem; background: var(--well);
   border: 1px solid var(--line); border-radius: 6px; padding: 6px 8px;
-  word-break: break-all;
+  overflow-wrap: anywhere;
 }
 
 @media (prefers-reduced-motion: reduce) {
