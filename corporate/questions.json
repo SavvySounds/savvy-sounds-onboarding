@@ -1,0 +1,665 @@
+{
+  "version": 1,
+  "title": "Let's set the tone for your event.",
+  "opening": "Tell us about your guests, the atmosphere you want, and any moments that need a soundtrack. Rough answers are welcome — we'll work out the details together.",
+  "states": ["blank", "none", "unknown", "miles", "confirmed"],
+  "state_labels": {
+    "blank": "Not answered",
+    "none": "There are none",
+    "unknown": "Not sure yet",
+    "miles": "Miles to suggest",
+    "confirmed": "Answered"
+  },
+  "sections": [
+    "Your event",
+    "The purpose",
+    "The room",
+    "The sound",
+    "The moments",
+    "People and practical details"
+  ],
+  "questions": [
+    {
+      "id": "company",
+      "section": "Your event",
+      "label": "Company",
+      "help": "The company throwing the event.",
+      "type": "text",
+      "owner": "event",
+      "required_to_submit": true,
+      "offers_miles": false
+    },
+    {
+      "id": "event_name",
+      "section": "Your event",
+      "label": "Event name",
+      "help": "What you call it internally is fine.",
+      "type": "text",
+      "owner": "event",
+      "required_to_submit": true,
+      "offers_miles": false
+    },
+    {
+      "id": "contact_name",
+      "section": "Your event",
+      "label": "Your name",
+      "help": "Who we talk to while we plan.",
+      "type": "text",
+      "owner": "event",
+      "required_to_submit": true,
+      "offers_miles": false
+    },
+    {
+      "id": "contact_email",
+      "section": "Your event",
+      "label": "Your email",
+      "help": "Where the private link and the receipt go.",
+      "type": "email",
+      "owner": "event",
+      "required_to_submit": true,
+      "offers_miles": false
+    },
+    {
+      "id": "event_date",
+      "section": "Your event",
+      "label": "Date",
+      "help": "If it is not locked in, pick \"Not sure yet\".",
+      "type": "date",
+      "owner": "event",
+      "required_to_submit": true,
+      "offers_miles": false
+    },
+    {
+      "id": "venue",
+      "section": "Your event",
+      "label": "Venue",
+      "help": "The room or building, if you know it.",
+      "type": "text",
+      "owner": "event",
+      "required_to_submit": false,
+      "offers_miles": false
+    },
+    {
+      "id": "city",
+      "section": "Your event",
+      "label": "City",
+      "help": "The town the event is in.",
+      "type": "text",
+      "owner": "event",
+      "required_to_submit": false,
+      "offers_miles": false
+    },
+    {
+      "id": "tz",
+      "section": "Your event",
+      "label": "Time zone of the event",
+      "help": "So every time we write down means the same thing.",
+      "type": "choice",
+      "options": [
+        "America/Los_Angeles",
+        "America/Denver",
+        "America/Phoenix",
+        "America/Chicago",
+        "America/New_York",
+        "Pacific/Honolulu",
+        "Other"
+      ],
+      "owner": "event",
+      "required_to_submit": false,
+      "offers_miles": false
+    },
+    {
+      "id": "guest_count",
+      "section": "Your event",
+      "label": "Roughly how many guests",
+      "help": "A round number is plenty.",
+      "type": "number",
+      "owner": "event",
+      "required_to_submit": false,
+      "offers_miles": false
+    },
+    {
+      "id": "event_type",
+      "section": "Your event",
+      "label": "What kind of event",
+      "help": "Pick the closest one.",
+      "type": "choice",
+      "options": [
+        "Staff celebration",
+        "Hospitality",
+        "Networking",
+        "Brand launch",
+        "Awards",
+        "Holiday party",
+        "Other"
+      ],
+      "owner": "event",
+      "required_to_submit": true,
+      "offers_miles": false
+    },
+    {
+      "id": "event_type_other",
+      "section": "Your event",
+      "label": "Tell us what kind",
+      "help": "A few words.",
+      "type": "text",
+      "owner": "event",
+      "when": {"answer": "event_type", "equals": "Other"},
+      "required_to_submit": false,
+      "offers_miles": false
+    },
+
+    {
+      "id": "success_looks_like",
+      "section": "The purpose",
+      "label": "What does a good night look like",
+      "help": "Say it however you would say it out loud.",
+      "type": "textarea",
+      "owner": "direction",
+      "required_to_submit": false,
+      "offers_miles": false
+    },
+    {
+      "id": "purpose_kind",
+      "section": "The purpose",
+      "label": "What the night is for",
+      "help": "Pick as many as fit.",
+      "type": "multi",
+      "options": [
+        "Staff celebration",
+        "Hospitality",
+        "Networking",
+        "Brand launch",
+        "Awards",
+        "Other"
+      ],
+      "owner": "direction",
+      "required_to_submit": false,
+      "offers_miles": false
+    },
+    {
+      "id": "music_role",
+      "section": "The purpose",
+      "label": "What the music is doing",
+      "help": "One of these three.",
+      "type": "choice",
+      "options": [
+        "Supports conversation",
+        "Brings guests together",
+        "Is the main event"
+      ],
+      "owner": "direction",
+      "required_to_submit": false,
+      "offers_miles": true
+    },
+
+    {
+      "id": "who_is_coming",
+      "section": "The room",
+      "label": "Who is in the room",
+      "help": "Pick as many as fit.",
+      "type": "multi",
+      "options": [
+        "Employees",
+        "Customers",
+        "Executives",
+        "Partners",
+        "Mixed"
+      ],
+      "owner": "direction",
+      "required_to_submit": false,
+      "offers_miles": false
+    },
+    {
+      "id": "age_range",
+      "section": "The room",
+      "label": "Rough age range",
+      "help": "Only if it would change what we play.",
+      "type": "choice",
+      "options": [
+        "Mostly 20s and 30s",
+        "Mostly 30s and 40s",
+        "Mostly 40s and up",
+        "A wide spread"
+      ],
+      "owner": "direction",
+      "required_to_submit": false,
+      "offers_miles": false
+    },
+    {
+      "id": "languages_cultures",
+      "section": "The room",
+      "label": "Languages or cultures worth playing to",
+      "help": "Only what helps the music. Nothing else about your guests.",
+      "type": "textarea",
+      "owner": "direction",
+      "required_to_submit": false,
+      "offers_miles": false
+    },
+    {
+      "id": "crowd_notes",
+      "section": "The room",
+      "label": "Anything else about this crowd",
+      "help": "Shy room, loud room, everyone knows each other.",
+      "type": "textarea",
+      "owner": "direction",
+      "required_to_submit": false,
+      "offers_miles": false
+    },
+
+    {
+      "id": "feel",
+      "section": "The sound",
+      "label": "How it should feel",
+      "help": "Pick as many as fit.",
+      "type": "multi",
+      "options": [
+        "Polished",
+        "Warm",
+        "Celebratory",
+        "Energetic",
+        "Understated",
+        "Unexpected"
+      ],
+      "owner": "direction",
+      "required_to_submit": false,
+      "offers_miles": true
+    },
+    {
+      "id": "dancing",
+      "section": "The sound",
+      "label": "Dancing",
+      "help": "Be honest — it changes the whole night.",
+      "type": "choice",
+      "options": ["Expected", "Possible", "Not planned"],
+      "owner": "direction",
+      "required_to_submit": false,
+      "offers_miles": false
+    },
+    {
+      "id": "styles",
+      "section": "The sound",
+      "label": "Styles you love",
+      "help": "Genres, eras, a band you always come back to.",
+      "type": "multi",
+      "options": [
+        "Soul and Motown",
+        "Disco and funk",
+        "Classic rock",
+        "Pop, new and old",
+        "Hip-hop and R&B",
+        "House and dance",
+        "Latin",
+        "Jazz and lounge",
+        "Indie and alternative",
+        "Country"
+      ],
+      "owner": "direction",
+      "required_to_submit": false,
+      "offers_miles": true
+    },
+    {
+      "id": "requests",
+      "section": "The sound",
+      "label": "Songs you want played",
+      "help": "Artist and title. Add as many as you like.",
+      "type": "songs",
+      "owner": "direction",
+      "required_to_submit": false,
+      "offers_miles": true
+    },
+    {
+      "id": "playlist_links",
+      "section": "The sound",
+      "label": "Playlist links",
+      "help": "Paste any playlist that shows the taste.",
+      "type": "links",
+      "owner": "direction",
+      "required_to_submit": false,
+      "offers_miles": false
+    },
+    {
+      "id": "dnp_songs",
+      "section": "The sound",
+      "label": "Songs and artists to keep off",
+      "help": "Anything that must not play. Artist and title.",
+      "type": "songs",
+      "owner": "direction",
+      "required_to_submit": false,
+      "offers_miles": false
+    },
+    {
+      "id": "dnp_themes",
+      "section": "The sound",
+      "label": "Genres or themes to avoid",
+      "help": "Whole styles or subjects to steer around.",
+      "type": "textarea",
+      "owner": "direction",
+      "required_to_submit": false,
+      "offers_miles": false
+    },
+    {
+      "id": "clean_versions",
+      "section": "The sound",
+      "label": "Clean versions",
+      "help": "Clean is on unless you turn it off.",
+      "type": "choice",
+      "options": ["clean", "explicit_ok", "mixed"],
+      "option_labels": {
+        "clean": "Clean versions only",
+        "explicit_ok": "Explicit is fine",
+        "mixed": "Clean early, explicit later"
+      },
+      "default": "clean",
+      "owner": "direction",
+      "required_to_submit": false,
+      "offers_miles": false
+    },
+    {
+      "id": "choice_style",
+      "section": "The sound",
+      "label": "How much you want to choose",
+      "help": "There is no wrong answer here.",
+      "type": "choice",
+      "options": [
+        "We choose the key songs",
+        "We review Miles's suggestions",
+        "We leave the choices to Miles"
+      ],
+      "owner": "direction",
+      "required_to_submit": false,
+      "offers_miles": false
+    },
+    {
+      "id": "guest_requests",
+      "section": "The sound",
+      "label": "Guest requests on the night",
+      "help": "What Miles should say when a guest walks up.",
+      "type": "choice",
+      "options": [
+        "Welcome",
+        "Ask our contact first",
+        "No guest requests"
+      ],
+      "owner": "direction",
+      "required_to_submit": false,
+      "offers_miles": false
+    },
+
+    {
+      "id": "moments",
+      "section": "The moments",
+      "label": "The parts of the night",
+      "help": "Pick the ones that happen, then give times if you have them.",
+      "type": "moments",
+      "options": [
+        "arrival",
+        "networking",
+        "dinner",
+        "presentations",
+        "awards",
+        "dancing",
+        "closing",
+        "custom"
+      ],
+      "owner": "running_order",
+      "required_to_submit": false,
+      "offers_miles": false
+    },
+    {
+      "id": "timeline_link",
+      "section": "The moments",
+      "label": "Timeline you already have",
+      "help": "Paste a link or a document address — we will read it, not guess.",
+      "type": "links",
+      "owner": "running_order",
+      "required_to_submit": false,
+      "offers_miles": false
+    },
+    {
+      "id": "awards_recipients",
+      "section": "The moments",
+      "label": "Who is receiving awards",
+      "help": "Names as they should be read out.",
+      "type": "textarea",
+      "owner": "direction",
+      "when": {"moment": "awards"},
+      "required_to_submit": false,
+      "offers_miles": false
+    },
+    {
+      "id": "awards_pronunciation",
+      "section": "The moments",
+      "label": "How to say the tricky names",
+      "help": "Write it the way it sounds. We keep your words exactly.",
+      "type": "textarea",
+      "owner": "direction",
+      "when": {"moment": "awards"},
+      "required_to_submit": false,
+      "offers_miles": false
+    },
+    {
+      "id": "awards_walkon",
+      "section": "The moments",
+      "label": "Walk-on music",
+      "help": "A song per person, or leave it to Miles.",
+      "type": "songs",
+      "owner": "direction",
+      "when": {"moment": "awards"},
+      "required_to_submit": false,
+      "offers_miles": true
+    },
+    {
+      "id": "awards_cue_text",
+      "section": "The moments",
+      "label": "The exact words that start and stop the music",
+      "help": "Word for word, so nothing is missed on the night.",
+      "type": "textarea",
+      "owner": "running_order",
+      "when": {"moment": "awards"},
+      "required_to_submit": false,
+      "offers_miles": false
+    },
+    {
+      "id": "awards_introducer",
+      "section": "The moments",
+      "label": "Who introduces whom",
+      "help": "Who is on the mic for each award.",
+      "type": "textarea",
+      "owner": "running_order",
+      "when": {"moment": "awards"},
+      "required_to_submit": false,
+      "offers_miles": false
+    },
+    {
+      "id": "awards_cue_caller",
+      "section": "The moments",
+      "label": "Who calls each cue",
+      "help": "The person who tells Miles to go.",
+      "type": "text",
+      "owner": "running_order",
+      "when": {"moment": "awards"},
+      "required_to_submit": false,
+      "offers_miles": false
+    },
+    {
+      "id": "dancing_familiarity",
+      "section": "The moments",
+      "label": "Familiar songs or something new",
+      "help": "How far off the beaten path Miles can go.",
+      "type": "choice",
+      "options": [
+        "Songs everybody knows",
+        "Mostly familiar, some surprises",
+        "Take us somewhere new"
+      ],
+      "owner": "direction",
+      "when": {"moment": "dancing"},
+      "required_to_submit": false,
+      "offers_miles": true
+    },
+    {
+      "id": "must_plays",
+      "section": "The moments",
+      "label": "Must-play songs for the dance floor",
+      "help": "Artist and title. These get played.",
+      "type": "songs",
+      "owner": "direction",
+      "when": {"moment": "dancing"},
+      "required_to_submit": false,
+      "offers_miles": false
+    },
+    {
+      "id": "dancing_opener",
+      "section": "The moments",
+      "label": "The song that opens the floor",
+      "help": "If you have one in mind.",
+      "type": "songs",
+      "owner": "direction",
+      "when": {"moment": "dancing"},
+      "required_to_submit": false,
+      "offers_miles": true
+    },
+    {
+      "id": "dancing_closer",
+      "section": "The moments",
+      "label": "The last song of the night",
+      "help": "How you want everyone to leave feeling.",
+      "type": "songs",
+      "owner": "direction",
+      "when": {"moment": "dancing"},
+      "required_to_submit": false,
+      "offers_miles": true
+    },
+    {
+      "id": "dinner_notes",
+      "section": "The moments",
+      "label": "Anything about dinner",
+      "help": "Volume, courses, speeches between courses.",
+      "type": "textarea",
+      "owner": "running_order",
+      "when": {"moment": "dinner"},
+      "required_to_submit": false,
+      "offers_miles": false
+    },
+    {
+      "id": "presentations_notes",
+      "section": "The moments",
+      "label": "Anything about the presentations",
+      "help": "Who speaks, how long, whether they bring their own sound.",
+      "type": "textarea",
+      "owner": "running_order",
+      "when": {"moment": "presentations"},
+      "required_to_submit": false,
+      "offers_miles": false
+    },
+
+    {
+      "id": "approver_name",
+      "section": "People and practical details",
+      "label": "Who gives the final yes",
+      "help": "The one person whose answer settles it. \"Not sure yet\" is fine.",
+      "type": "text",
+      "owner": "event",
+      "required_to_submit": true,
+      "offers_miles": false
+    },
+    {
+      "id": "approver_email",
+      "section": "People and practical details",
+      "label": "Their email",
+      "help": "So they get their own private link.",
+      "type": "email",
+      "owner": "event",
+      "required_to_submit": false,
+      "offers_miles": false
+    },
+    {
+      "id": "day_of_contact",
+      "section": "People and practical details",
+      "label": "Day-of contact",
+      "help": "Who Miles finds when he walks in. Name and mobile.",
+      "type": "text",
+      "owner": "event",
+      "required_to_submit": false,
+      "offers_miles": false
+    },
+    {
+      "id": "planner_name",
+      "section": "People and practical details",
+      "label": "Planner or show caller",
+      "help": "The person running the order of the night.",
+      "type": "text",
+      "owner": "event",
+      "required_to_submit": false,
+      "offers_miles": false
+    },
+    {
+      "id": "production_contact",
+      "section": "People and practical details",
+      "label": "Venue or production contact",
+      "help": "Whoever owns the sound and the room.",
+      "type": "text",
+      "owner": "production",
+      "required_to_submit": false,
+      "offers_miles": false
+    },
+    {
+      "id": "mic_needs",
+      "section": "People and practical details",
+      "label": "Microphones",
+      "help": "Pick everything that gets used.",
+      "type": "multi",
+      "options": [
+        "Handheld",
+        "Lapel",
+        "Podium",
+        "An MC or host",
+        "None"
+      ],
+      "owner": "production",
+      "required_to_submit": false,
+      "offers_miles": false
+    },
+    {
+      "id": "access_constraints",
+      "section": "People and practical details",
+      "label": "Getting in and setting up",
+      "help": "Load-in door, lift, times, parking, anything awkward.",
+      "type": "textarea",
+      "owner": "production",
+      "required_to_submit": false,
+      "offers_miles": false
+    },
+    {
+      "id": "sound_constraints",
+      "section": "People and practical details",
+      "label": "Sound limits",
+      "help": "Volume caps, curfews, neighbours, house system rules.",
+      "type": "textarea",
+      "owner": "production",
+      "required_to_submit": false,
+      "offers_miles": false
+    },
+    {
+      "id": "live_act",
+      "section": "People and practical details",
+      "label": "A band or live act",
+      "help": "Who else is making sound, and when.",
+      "type": "textarea",
+      "owner": "production",
+      "required_to_submit": false,
+      "offers_miles": false
+    },
+    {
+      "id": "open_questions",
+      "section": "People and practical details",
+      "label": "Anything still up in the air",
+      "help": "Tell us what you are waiting on.",
+      "type": "textarea",
+      "owner": "event",
+      "required_to_submit": false,
+      "offers_miles": false
+    }
+  ]
+}
