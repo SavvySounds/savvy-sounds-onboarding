@@ -298,3 +298,122 @@ list from a `NEEDLE_HASHES` tuple; a spelled needle never enters the repo).
   resolve the planner conflict → client view, Miles's view and regenerated day
   sheet agree on revision and values). It asserts the world before it records
   (innerWidth, visibilityState) and throws its first load away.
+
+## 11. The hosted home (decided 2026-09-14 evening; every crew builds to this)
+
+Miles: "I don't want to spend any money." So the pages live on the free GitHub
+Pages home the wedding form already uses (this repo, `main`), under his own
+address `clients-prep.savvysoundscollective.com`, and the answers live in his
+Google Drive behind a Google Apps Script bound to his Google account. Nothing
+else runs anywhere. The vocabulary in §2–§9 does not change; this section says
+where each piece runs and how the doors travel.
+
+### Where each piece runs
+
+| Piece | Where | File |
+|---|---|---|
+| The brain: validate, ownership, merge/conflict, effects, next action | the script | `corporate/script/rules.gs` (a port of `rules.py`, same function names) |
+| The ONE writer: events, change log, access, receipts, revision, lock | the script | `corporate/script/store.gs` (a port of `store.py`, same function names; the only file that names `DriveApp`) |
+| The doors: `doPost` router, audience filter, `setup()`, `doGet` | the script | `corporate/script/doors.gs` (a port of `server.py`'s routes) |
+| The day sheet and its CSV | the script | `corporate/script/daysheet.gs` (a port of `daysheet.py`) |
+| The questions | `corporate/questions.json`, the ONLY copy | the bundler and the loader append `const QUESTIONS = <the file>;` so the script sees it as a constant; the pages fetch it through the `/api/questions` door as before |
+| The pages | GitHub Pages, static | `corporate/client/`, `corporate/dj/`, unchanged except the `door()` helper and where the token comes from |
+| The home address | `corporate/home.js` | one line: `window.PREP_HOME = "<the script's /exec address>"`; a placeholder until Miles publishes; a page whose home is not an `http(s)` address says "This page is not connected to its home yet" and never pretends to save |
+| The stand-in for the local proof | this Mac, node 24, zero dependencies | `corporate/script/load.mjs` loads every `.gs` into one `vm` context (Apps Script's shared global scope) with `DriveApp`, `LockService`, `PropertiesService`, `ContentService`, `Utilities`, `Session`, `Logger` shimmed over a disk folder; `corporate/script/standin.mjs` serves it over HTTP the way Google does |
+
+The Python brain (`store.py`, `rules.py`, `server.py`, `daysheet.py`,
+`seed.py`, `tests/test_*.py` for them) retires the day the script serves; one
+vocabulary lives in one place. `tests/mutate.py`, `tests/test_one_writer.py`
+and `tests/test_ship_safe.py` stay (they are rulers, not a second brain) and
+learn the new file names.
+
+### How a door travels
+
+Apps Script answers on ONE address with HTTP 200 always, reads no request
+headers, and sets no response status. So:
+
+- Every door in §6 — reads included — is a `POST` to the script address with
+  `Content-Type: text/plain;charset=utf-8` (a simple request: no preflight; the
+  browser follows Google's redirect to the answer) and this body:
+  `{"door": "<the path from §6, e.g. /api/events/ev_x/save>", "token": "<token>", "body": {…the request body from §6 or §7…}}`.
+  For `changes` the query rides in the path exactly as §6 spells it
+  (`/api/events/ev_x/changes?since=3`).
+- The answer is the §6/§7 JSON with one more key, `status` (200, 403, 409,
+  421, 422, 404): `{"status": 409, "ok": false, "error": "conflict", …}`.
+  The day sheet doors answer `{"status": 200, "ok": true, "kind": "text/html", "text": "<html>…"}`
+  and `{"status": 200, "ok": true, "kind": "text/csv", "text": "…"}`.
+- No token, a dead token, a malformed body, an unknown door: `status` 403 or
+  404 with `{ok:false, error}` as §5/§6 say. Nothing in a URL ever carries a
+  token; the script's own address carries nothing but the door name in the body.
+- The page helper (`door()` in `client.js`, `dj.js`, and the walks) is the only
+  thing that changes on the page side: it posts `{door, token, body}` to
+  `PREP_HOME` and hands back `{status, data}` read from the answer.
+
+### The private link
+
+GitHub Pages has no server, so `/c/<token>` cannot be routed. The link is
+`https://clients-prep.savvysoundscollective.com/corporate/client/#<token>`.
+The fragment never reaches any server or log. The page moves it into memory +
+`sessionStorage` and strips it from the address bar (`history.replaceState` to
+`/corporate/client/`), as §5 already says for `/c`. Miles's view is
+`…/corporate/dj/` and asks for his pass, as it does today. `POST /api/dj/events`
+returns `links` as `/corporate/client/#<token>`; the page prefixes the origin.
+
+### Inside the script
+
+- One Drive folder, made by `setup()` and remembered as script property
+  `FOLDER_ID`. Flat files by name: `<event_id>.json` (the record, §3),
+  `<event_id>.changes.jsonl` (append-only, §4), `access.json` (§5). A read is
+  `file.getBlob().getDataAsString()`; a write is `file.setContent()`
+  (a new file: `folder.createFile(name, text, MimeType.PLAIN_TEXT)`). Drive
+  makes each write whole or not at all; the event is written before its change
+  lines, so a death between the two leaves a revision without its line — the
+  change reader tolerates a short or missing tail (§4 rule, unchanged).
+- The lock is `LockService.getScriptLock().waitLock(30000)` around every write
+  door, released in `finally`. Apps Script has no per-event lock; one script
+  lock serialises all events, which at a handful of bookings costs nothing.
+  Lock lost → `status` 503 `{ok:false, error:"busy"}`, nothing written, the
+  page shows "Not saved yet — your answers are still here" and offers Retry.
+- Ids: `Utilities.getUuid()` with the dashes removed is 32 hex — tokens exactly
+  as §5; `ev_` + the first 10, `ch_` + 12, `sub_` is the page's as before.
+  Stamps: `new Date().toISOString().replace(/\.\d{3}Z$/, "Z")` — the same
+  `YYYY-MM-DDTHH:MM:SSZ` the Python wrote.
+- `setup()` (Miles runs it once from the editor): makes or finds the folder,
+  writes `access.json` with a fresh `dj_token`, and logs one line:
+  `Your pass for the view: <token>`. Running it again keeps the folder and the
+  pass; it never wipes anything.
+- `doGet` answers one plain sentence: "This is the prep home. There is nothing
+  to see here; your link opens the page." No data, no script.
+- The script is plain ASCII, no ES modules, no `require`, no `fetch`; `.gs`
+  files share one global scope, so every top-level name is unique across them.
+
+### The stand-in (what the local proof runs against)
+
+`corporate/script/standin.mjs` opens two listeners so that the page and its
+home are cross-origin exactly as Pages and Google are:
+
+| Listener | Serves |
+|---|---|
+| `127.0.0.1:8790` | the working copy's root statically (so `/corporate/client/` and `/corporate/dj/` are the real paths), with `corporate/home.js` served as `window.PREP_HOME = "http://127.0.0.1:8793/macros/s/local/exec"` |
+| `127.0.0.1:8793` | `POST /macros/s/local/exec` → runs `doPost`, keeps the answer, replies `302 Location: /macros/echo?id=<n>`; `GET /macros/echo?id=<n>` → `200 text/plain` with that answer once, `Access-Control-Allow-Origin: *`; `GET /macros/s/local/exec` → `doGet` |
+
+Each listener refuses a `Host` that is not its own (421). Its files live under
+`corporate/data/drive/` (gitignored). `LockService` in the shim is a real
+cross-process lock (an atomic `mkdir` with a wait), so two node processes
+saving the same event race for real and the revision count proves the lock.
+`corporate/script/seed.mjs` empties the folder, loads the two fixtures through
+the script's own functions (never a door Google would expose) and prints the
+links. `corporate/script/bundle.mjs` prints the one file Miles pastes into the
+editor: every `.gs` in name order, then `const QUESTIONS = …;`.
+
+### Publishing (Miles's clicks, in `VERIFY.md` "Going live")
+
+1. `node corporate/script/bundle.mjs | LANG=en_US.UTF-8 pbcopy`, then at
+   script.google.com: New project → select all in Code.gs → paste → save.
+2. Run → `setup` (allow the Drive permission once) → read the pass in the log.
+3. Deploy → New deployment → Web app → Execute as **Me**, Who has access
+   **Anyone** → Deploy → copy the `/exec` address.
+4. That address goes into `corporate/home.js` (one line), committed, pushed by
+   Miles. Then the DNS record and the custom domain in the Pages settings,
+   both his hands. The wedding form's address moves with the domain (old
+   links redirect) — say so before he presses.
