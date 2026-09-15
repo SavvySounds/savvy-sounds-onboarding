@@ -1,16 +1,37 @@
 <!doctype html>
+<html lang="en">
+<head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex, nofollow">
 <title>Savvy Sounds — your event</title>
-<style>
-  body { font: 17px/1.5 -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
-         margin: 0; padding: 32px 20px; color: #141414; background: #faf8f4; }
-  main { max-width: 34rem; margin: 0 auto; }
-  h1 { font-size: 22px; margin: 0 0 12px; }
-</style>
-<main>
-  <h1>Screen coming</h1>
-  <p>This is where the client fills in their event. The page itself is being
-     built next; everything behind it — the questions, the saving, the private
-     link — is already here and working.</p>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/client/client.css">
+</head>
+<body>
+<header class="topbar">
+  <div class="topbar-inner">
+    <span class="brand">Savvy Sounds</span>
+    <div class="meter" id="meter" role="progressbar" aria-label="How far through the form you are"
+         aria-valuemin="0" aria-valuemax="6" aria-valuenow="0" hidden></div>
+    <span class="step" id="step" hidden></span>
+  </div>
+</header>
+
+<main class="wrap" id="main" tabindex="-1">
+  <p class="muted" id="booting">Opening your event…</p>
 </main>
+
+<div class="footbar" id="footbar" hidden>
+  <div class="footbar-inner">
+    <button type="button" class="btn plain" id="backbtn">Back</button>
+    <p class="status" id="status" role="status" aria-live="polite"></p>
+    <button type="button" class="btn go" id="nextbtn">Next</button>
+  </div>
+</div>
+
+<script src="/client/client.js"></script>
+</body>
+</html>
