@@ -86,10 +86,16 @@ is done, how it was proven, and what is deliberately not done.
 
 ## Deliberately not done (Stage 2 and later, or Miles's call)
 
-- Nothing is hosted. The private link only works on this Mac. **The one
-  prerequisite left to Miles is where the server runs for real clients**
-  (a small private host of his choosing, or the Google script rebuilt with a
-  real confirmation). The doors and the page stay the same either way.
+- Nothing is hosted yet. The private link only works on this Mac. **Miles
+  decided the home on 09-14 evening: no money.** Pages stay on the free home
+  the wedding form already uses (GitHub Pages from `main`), under his own
+  address `clients-prep.savvysoundscollective.com` (the domain's name records
+  are at Google, his account; one record + the name in the Pages settings).
+  Answers save into his Google Drive through a Google Apps Script rebuilt
+  WITH a real confirmation (revision in the receipt), keeping the same doors
+  and vocabulary as `CONTRACT.md`. Vercel was ruled out: its free plan is
+  personal-use only. Building this is the next bounded task; Miles adds the
+  record and presses the live button himself — nothing goes out before.
 - No music: no song cards, listening links, releases, show copy, source
   reconciliation, matching or unattended checks (Stages 2–5).
 - Time-to-complete has not been measured with a person (the plan asks for a
