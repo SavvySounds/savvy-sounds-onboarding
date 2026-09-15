@@ -67,8 +67,8 @@ is done, how it was proven, and what is deliberately not done.
   needle that does not match exactly once.
 - Real-screen walks in headless Chrome at 390×844 and 1440×900 with mock
   keychain flags (nothing pops up for Miles): the client page (175 readings),
-  Miles's view (98 readings) and the Stage 1 gate itself — the planner moves
-  the awards start 20:00 → 20:15, Miles sees both times with Jules named and
+  Miles's view (101 readings) and the Stage 1 gate itself — the planner moves
+  the awards start 8:00 PM → 8:15 PM, Miles sees both times with Jules named and
   takes it, the approver's brief, Miles's view and the regenerated day sheet
   all read the new time on the same revision, and the simple networking event
   submits on a phone and shows its receipt.
@@ -79,6 +79,10 @@ is done, how it was proven, and what is deliberately not done.
   verdict is recorded below). Reports live in `~/Developer/handoff/jobs/`.
 - First-hand in the desktop app's browser pane: the client page on a phone
   size and Miles's view on the desktop, no console errors.
+- Every time a person READS is 12-hour ("8:15 PM"), on Miles's page, the
+  client page, the day sheet and its CSV; stored values stay `HH:MM`. One
+  `clock()` per language (client.js, dj.js, rules.py). Miles's word, 09-14:
+  "I don't read things that way" — never show him 24-hour time.
 
 ## Deliberately not done (Stage 2 and later, or Miles's call)
 
