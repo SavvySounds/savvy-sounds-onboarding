@@ -27,7 +27,12 @@ from pathlib import Path
 
 CORPORATE = Path(__file__).resolve().parent.parent
 BENCH = CORPORATE.parent
-SANDBOX_PORT = "8792"
+# The port every sandbox's HTTP checks bind.  It is the runner's own, not the
+# preview's (8790) and not the suite's (8791).  CORP_MUTATE_PORT moves it when
+# another desk on this Mac is already holding this one — a busy port makes the
+# baseline red, and a red baseline scores every mutation "caught", so the way
+# round it has to be a deliberate, visible one.
+SANDBOX_PORT = os.environ.get("CORP_MUTATE_PORT", "8792")
 
 # file, what to break, what to put there instead, and the check that must notice.
 NEEDLES = [
@@ -92,6 +97,19 @@ NEEDLES = [
      "        if False:",
      "corporate.tests.test_http.Doors.test_a_link_that_ran_out_stops_working",
      "a link that ran out still works"),
+
+    ("store.py",
+     "        wanted = min(wanted, int(event.get(\"revision\") or 0))",
+     "        wanted = int(wanted)",
+     "corporate.tests.test_http.Doors."
+     "test_the_bookmark_never_runs_past_where_the_event_is",
+     "what Miles has read can run past the event and hide a change"),
+
+    ("store.py",
+     "        wanted = max(wanted, standing)",
+     "        wanted = int(wanted)",
+     "corporate.tests.test_http.Doors.test_the_bookmark_never_moves_back",
+     "what Miles has read can move back and show him old changes again"),
 
     # --- rules.py: the brain ----------------------------------------------
     ("rules.py",
@@ -211,6 +229,29 @@ NEEDLES = [
      "        if False:",
      "corporate.tests.test_http.Doors.test_a_link_for_one_event_cannot_read_another",
      "one client's link opens another client's event"),
+
+    ("server.py",
+     '    if not [p for p in people if p["role"] == "approver"]:',
+     "    if False:",
+     "corporate.tests.test_http.Doors.test_a_booking_needs_the_person_who_says_yes",
+     "a booking starts with nobody who can say yes to anything"),
+
+    ("server.py",
+     "        if role in taken:",
+     "        if False:",
+     "corporate.tests.test_http.Doors."
+     "test_two_people_cannot_share_one_role_and_lose_a_link",
+     "two people on one role, and one of the two links is lost silently"),
+
+    ("server.py",
+     '            if who["role"] != "dj":\n'
+     '                return self.send_json(403, {"ok": False, "error": "not-allowed"})\n'
+     '            code, answer = store.set_seen(',
+     '            if False:\n'
+     '                return self.send_json(403, {"ok": False, "error": "not-allowed"})\n'
+     '            code, answer = store.set_seen(',
+     "corporate.tests.test_http.Doors.test_only_miles_says_what_miles_has_read",
+     "a client can say what Miles has read and hide their own changes"),
 
     # --- daysheet.py: the sheet that leaves the building -------------------
     ("daysheet.py",

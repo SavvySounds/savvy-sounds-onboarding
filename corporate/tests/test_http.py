@@ -209,6 +209,158 @@ class Doors(ServerCase):
         self.assertEqual(code, 200)
         self.assertEqual([c["field"] for c in body["changes"]], ["answers.crowd_notes"])
 
+    # --- starting a booking ------------------------------------------------
+    def start_a_booking(self, people):
+        return self.call("/api/dj/events", token=self.dj,
+                         body={"name": "Harbor Studio Networking",
+                               "company": "Harbor Studio", "date": "2026-10-02",
+                               "tz": "America/Los_Angeles", "people": people})
+
+    def test_a_booking_hands_back_a_link_that_opens_as_that_person(self):
+        code, body = self.start_a_booking(
+            [{"name": "Dana Whitfield", "role": "approver", "email": "dana@example.com"},
+             {"name": "Priya Raman", "role": "contact", "email": "priya@example.com"}])
+        self.assertEqual(code, 200, body)
+        self.assertEqual(sorted(body["links"]), ["approver", "contact"])
+        self.assertRegex(body["links"]["approver"], r"^/c/[0-9a-f]{32}$")
+
+        token = body["links"]["approver"].rsplit("/", 1)[1]
+        code, me = self.call("/api/me", token=token)
+        self.assertEqual(code, 200)
+        self.assertEqual(me["role"], "approver")
+        self.assertEqual(me["person"]["name"], "Dana Whitfield")
+        self.assertEqual(me["event_id"], body["event_id"])
+
+        code, event = self.call("/api/events/%s" % body["event_id"], token=token)
+        self.assertEqual(code, 200)
+        self.assertEqual(event["answers"]["event_name"]["value"],
+                         "Harbor Studio Networking")
+        code, denied = self.call("/api/events/%s" % self.event_id, token=token)
+        self.assertEqual(denied["error"], "not-your-event")
+
+    def test_a_booking_needs_the_person_who_says_yes(self):
+        code, body = self.start_a_booking(
+            [{"name": "Priya Raman", "role": "contact", "email": "priya@example.com"}])
+        self.assertEqual(code, 422)
+        self.assertTrue(body["errors"][0]["message"])
+        code, empty = self.start_a_booking([])
+        self.assertEqual(empty["errors"][0]["field"], "people")
+        code, rows = self.call("/api/events", token=self.dj)
+        self.assertEqual(len(rows), 1, "a refused booking must not leave an event behind")
+
+    def test_two_people_cannot_share_one_role_and_lose_a_link(self):
+        code, body = self.start_a_booking(
+            [{"name": "Dana Whitfield", "role": "approver", "email": "dana@example.com"},
+             {"name": "Priya Raman", "role": "approver", "email": "priya@example.com"}])
+        self.assertEqual(code, 422)
+        self.assertIn("one person for each role", body["errors"][0]["message"].lower())
+
+    def test_a_booking_refuses_a_role_it_does_not_hand_links_to(self):
+        for role in ("dj", "producer", ""):
+            code, body = self.start_a_booking(
+                [{"name": "Dana Whitfield", "role": "approver",
+                  "email": "dana@example.com"},
+                 {"name": "Priya Raman", "role": role, "email": "priya@example.com"}])
+            self.assertEqual(code, 422, role)
+
+    def test_a_booking_refuses_an_email_that_is_not_one(self):
+        code, body = self.start_a_booking(
+            [{"name": "Dana Whitfield", "role": "approver", "email": "dana at example"}])
+        self.assertEqual(code, 422)
+
+    def test_a_person_id_is_never_the_text_that_was_typed(self):
+        code, body = self.start_a_booking(
+            [{"name": "../../etc/passwd", "role": "approver",
+              "email": "dana@example.com"}])
+        self.assertEqual(code, 200, body)
+        code, event = self.call("/api/events/%s" % body["event_id"], token=self.dj)
+        for person in event["people"]:
+            self.assertRegex(person["person_id"], r"^p_[a-z0-9-]+x*$")
+
+    # --- what Miles has already read ---------------------------------------
+    def rowfor(self, token=None):
+        code, rows = self.call("/api/events", token=token or self.dj)
+        self.assertEqual(code, 200)
+        return [row for row in rows if row["event_id"] == self.event_id][0]
+
+    def a_client_saves_something(self, mark):
+        code, body = self.call("/api/events/%s/save" % self.event_id,
+                               token=self.token["approver"],
+                               body={"base_revision": self.rowfor()["revision"],
+                                     "submission_id": "sub_" + mark,
+                                     "answers": {"crowd_notes": {
+                                         "value": "Loud room, %s." % mark,
+                                         "state": "confirmed"}}})
+        self.assertEqual(code, 200, body)
+        return body["revision"]
+
+    def test_marking_an_event_as_looked_at_clears_what_changed(self):
+        row = self.rowfor()
+        self.assertGreater(row["changed_since_seen"], 0)
+        code, body = self.call("/api/dj/seen", token=self.dj,
+                               body={"event_id": self.event_id,
+                                     "revision": row["revision"]})
+        self.assertEqual(code, 200)
+        self.assertEqual(body["dj_seen_revision"], row["revision"])
+        self.assertEqual(self.rowfor()["changed_since_seen"], 0)
+        self.a_client_saves_something("after")
+        self.assertEqual(self.rowfor()["changed_since_seen"], 1)
+
+    def test_the_bookmark_never_runs_past_where_the_event_is(self):
+        row = self.rowfor()
+        code, body = self.call("/api/dj/seen", token=self.dj,
+                               body={"event_id": self.event_id, "revision": 999})
+        self.assertEqual(code, 200)
+        self.assertEqual(body["dj_seen_revision"], row["revision"])
+        self.assertEqual(self.rowfor()["changed_since_seen"], 0)
+        self.a_client_saves_something("later")
+        self.assertEqual(self.rowfor()["changed_since_seen"], 1,
+                         "a bookmark that ran ahead would hide this change")
+
+    def test_the_bookmark_never_moves_back(self):
+        row = self.rowfor()
+        self.call("/api/dj/seen", token=self.dj,
+                  body={"event_id": self.event_id, "revision": row["revision"]})
+        code, body = self.call("/api/dj/seen", token=self.dj,
+                               body={"event_id": self.event_id, "revision": 1})
+        self.assertEqual(code, 200)
+        self.assertEqual(body["dj_seen_revision"], row["revision"])
+        self.assertEqual(self.rowfor()["changed_since_seen"], 0)
+
+    def test_only_miles_says_what_miles_has_read(self):
+        for role in ("approver", "planner", "contact"):
+            code, body = self.call("/api/dj/seen", token=self.token[role],
+                                   body={"event_id": self.event_id, "revision": 1})
+            self.assertEqual(code, 403, role)
+            self.assertEqual(body["error"], "not-allowed", role)
+        self.assertEqual(self.rowfor()["changed_since_seen"],
+                         len(self.store.read_changes(self.event_id)))
+
+    def test_marking_an_event_nobody_minted_is_refused_in_words(self):
+        code, body = self.call("/api/dj/seen", token=self.dj,
+                               body={"event_id": "ev_0000000000", "revision": 1})
+        self.assertEqual(code, 404)
+        self.assertEqual(body["error"], "no-such-event")
+        code, body = self.call("/api/dj/seen", token=self.dj,
+                               body={"event_id": "../../etc/passwd", "revision": 1})
+        self.assertEqual(code, 404)
+        self.assertEqual(body["error"], "no-such-event")
+
+    def test_a_revision_that_is_not_a_number_is_refused_in_words(self):
+        code, body = self.call("/api/dj/seen", token=self.dj,
+                               body={"event_id": self.event_id, "revision": "soon"})
+        self.assertEqual(code, 422)
+        self.assertEqual(body["error"], "invalid")
+        self.assertTrue(body["errors"][0]["message"])
+
+    def test_marking_it_read_is_not_a_change_to_the_event(self):
+        row = self.rowfor()
+        lines = len(self.store.read_changes(self.event_id))
+        self.call("/api/dj/seen", token=self.dj,
+                  body={"event_id": self.event_id, "revision": row["revision"]})
+        self.assertEqual(self.rowfor()["revision"], row["revision"])
+        self.assertEqual(len(self.store.read_changes(self.event_id)), lines)
+
     # --- the sheets --------------------------------------------------------
     def test_the_day_sheet_prints_the_revision_the_zone_and_the_cue_words(self):
         code, page = self.call("/api/events/%s/daysheet" % self.event_id,
