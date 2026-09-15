@@ -520,6 +520,7 @@
     var trouble = S.status.kind === 'device' || S.status.kind === 'trouble';
     line.className = trouble ? 'status trouble' : 'status';
     if (retry) {
+      retry.textContent = 'Retry';
       retry.hidden = !trouble;
       retry.onclick = function () { send(S.view === 'review'); };
     }

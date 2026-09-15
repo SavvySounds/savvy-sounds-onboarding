@@ -21,15 +21,21 @@
 </header>
 
 <main class="wrap" id="main" tabindex="-1">
-  <p class="muted" id="booting">Opening your event…</p>
+  <p class="muted" id="booting">Savvy Sounds is opening your event…</p>
+  <noscript>
+    <p class="note warn">This page needs a browser with scripts turned on.
+      Miles can take your answers another way — his number is on your booking.</p>
+  </noscript>
 </main>
 
 <div class="footbar" id="footbar" hidden>
   <div class="footbar-inner">
-    <button type="button" class="btn plain" id="backbtn">Back</button>
+    <!-- The words on these three are written by client.js, from the state the
+         page is really in; the bar itself is put away until there is one. -->
+    <button type="button" class="btn plain" id="backbtn"></button>
     <p class="status" id="status" role="status" aria-live="polite"></p>
-    <button type="button" class="editlink" id="retrybtn" hidden>Retry</button>
-    <button type="button" class="btn go" id="nextbtn">Next</button>
+    <button type="button" class="editlink" id="retrybtn" hidden></button>
+    <button type="button" class="btn go" id="nextbtn"></button>
   </div>
 </div>
 

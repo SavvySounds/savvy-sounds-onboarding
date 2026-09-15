@@ -241,15 +241,192 @@ Takes about a minute and a half.
 
 ---
 
-## Client page — written by the screen crew
+## Client page
 
-Placeholder. `corporate/client/index.html` currently says "Screen coming".
+The page a client opens from their private link: `corporate/client/index.html`
+with `client.css` and `client.js` beside it. Six parts of a form, a read-back
+before they send, a receipt, and the brief for their event. Every question,
+every helping line, every option and every one of the five answer states is
+read out of `questions.json` at the moment the page opens — no question is
+written down twice, and a word that file does not hold does not appear.
 
-When it lands, this section gets: how to open a private link on a phone and on a
-laptop, filling the form in without losing a half-typed answer, the review step,
-the receipt with the event name and revision on it, what a failed save looks
-like and that the answers are still there, and the same walk with the keyboard
-only.
+### Look at it working
+
+    python3 corporate/seed.py
+    python3 corporate/server.py
+
+`seed.py` prints a private link per person. Open one in a browser:
+
+    http://127.0.0.1:8790/c/<the 32 characters it printed>
+
+The link works once as a link: the page takes the pass out of the address bar
+and keeps it for that browser tab only, so the address goes back to
+`http://127.0.0.1:8790/c` and a shoulder-surfed screen shows nothing. A refresh
+still works; a fresh tab does not, which is the point.
+
+To see it the way a client will, make the window 390 wide (Chrome: View >
+Developer > Developer Tools, then the phone icon, iPhone 14 Pro).
+
+Expect, in order: the words "Let's set the tone for your event.", the name of
+the event, who the page thinks you are, and where you left off. **Continue**
+walks the six parts; the bar at the top fills as you go; the line at the bottom
+says one of exactly four things and nothing else:
+
+| The line says | It means |
+|---|---|
+| `Saved · revision 7` | The event has it. |
+| `Saving…` | On its way. |
+| `Not saved yet — your answers are still here.` with **Retry** | The door said no. Nothing was lost. |
+| `Saved on this device only — not yet sent to Savvy Sounds.` with **Retry** | The line is down. Nothing was lost. |
+
+Things worth doing by hand once:
+
+- Type half an answer and press **Back**, then **Next**. The half is still there.
+- Press "Not sure yet" under any question. The box goes quiet but the words
+  stay on screen; press it again and they come back, live.
+- On **The moments**, turn Awards on, type into "How to say the tricky names",
+  turn Awards off, turn it on again. The pronunciation is still there.
+- Stop the server (control-C), type something, wait two seconds: the bottom
+  line says the answers are on this device only. Start the server again and
+  press **Retry**: one save, one revision, nothing landed twice.
+
+### The walk that proves it
+
+    node corporate/proof/walk-client.mjs
+
+It needs nothing running: it seeds a practice store of its own in a throwaway
+folder the Mac hands out for temporary work, opens a server on a free port
+(never 8790, so it cannot touch what you are looking at), and drives a real
+headless Chrome. It walks **both** practice events at **390x844** and at
+**1440x900**, plus the planner's own screen on the awards event, and kills
+every process it started before it prints the last line.
+
+Expect the last line to read **174 of 174 checks passed** and one `PASS` line
+per check above it. Any `FAIL` and it exits red. Frames land in
+`corporate/proof/frames/` (not kept in the repo).
+
+What it measures, in numbers, on the real screen:
+
+| Reading | Needs | Measured |
+|---|---|---|
+| Body text on the paper | 7:1 | **8.77:1** (ink 78,72,60 on 253,251,246) |
+| A question's label | 7:1 | **16.04:1** |
+| The gold action button | 4.5:1 | **5.13:1** (cream 255,249,238 on gold 142,98,16) |
+| Controls reached by Tab, each wearing our own ring | all of them | **8 of 8, 0 with only Chrome's grey ring** |
+| Every control's height | 44px | all of them |
+| Page width against window width | never wider | **390 in 390**, **1440 in 1440**, every screen |
+| With motion turned down | arrives finished | opacity 1, no transform, 0 animations running |
+
+And in behaviour: the four answer states come back apart from each other
+(`blank` / `none` / `unknown` / `confirmed`); a refresh mid-form brings the
+draft back; a save under way never takes the box away from the person typing;
+sending without a needed answer puts the door's own words beside that question
+and the cursor in it; the receipt carries the event's name and revision; the
+same attempt sent twice gives the same receipt and no second revision; two
+people changing one answer opens the two-answers screen with both values, the
+name of who changed it and when; the person who owns a decision sees it and
+nobody else does; and a link that has run out says "This link has expired — ask
+Miles for a fresh one." and shows nothing else at all.
+
+### Watch the walk catch a real break
+
+The two-answers screen only ever appears because the page tells the door which
+revision it was looking at. Take that away and the client silently overwrites
+whatever Miles typed:
+
+    cp corporate/client/client.js /tmp/client-kept.js
+    python3 - <<'EOF'
+    import pathlib
+    p = pathlib.Path("corporate/client/client.js")
+    p.write_text(p.read_text().replace(
+        "var body = {base_revision: S.event.revision, submission_id: S.attempt,",
+        "var body = {submission_id: S.attempt,"))
+    EOF
+    CORP_WALK_ONLY=harbor-390 node corporate/proof/walk-client.mjs     # expect RED
+    cp /tmp/client-kept.js corporate/client/client.js
+    CORP_WALK_ONLY=harbor-390 node corporate/proof/walk-client.mjs     # expect green
+
+Seen going red, twice, on the run above: *"when two people change one answer
+the page shows both, side by side — no two-answers screen … the door answered
+200"*, and then *"no control says Keep mine"*. The door answers 200 because it
+has been told the page saw the newest revision, which it had not — so one
+person's answer quietly lands on top of the other's. Put the file back with the
+copy, never with git: that eats work nobody meant to lose.
+
+`CORP_WALK_ONLY=harbor-390` narrows the walk to one event at one width while
+working; leave it off for the whole thing.
+
+### What the two design passes found
+
+The finished screens went through a design review and an Apple-HIG usability
+review, both reading the real frames. What changed because of them:
+
+- A letter typed while a save was in the air was thrown away on any connection
+  slower than this Mac talking to itself, because the draft was cleared by
+  matching the answer's *state* instead of its value. Now only what was really
+  sent is let go, and a save that lands while somebody is typing redraws the
+  status line alone. There is a check for it.
+- The bar at the top never went away — a `display` rule of ours outranks the
+  browser's own way of hiding things — so a full six-of-six bar sat over the
+  review, the receipt and the brief.
+- Every tap threw the focus to the top of the document: the code that was meant
+  to put it back read a value nothing ever set. On a phone that closes the
+  keyboard mid-answer.
+- The error ink measured 4.97:1 and is now 7.97:1.
+- "Not sure yet" used to take the typed words off the screen. They were kept,
+  but nobody could tell. They now stay, quietly.
+- The read-back said "The parts of the night — Not answered" however many parts
+  were set, because they are kept beside the answers and it never went to look.
+- Times read `18:00`; they now read `6:00 PM`, and `21:30 to 00:30` reads
+  "9:30 PM to 12:30 AM, into the next day". The date reads
+  "Friday, November 6, 2026". The brief called a venue "Where" when the form
+  calls it "Venue".
+
+### Where this page refuses
+
+- **`questions.json` has no words for the parts of the night.** The `moments`
+  question lists `arrival`, `dinner`, `awards`, `custom` and the rest as bare
+  words with no `option_labels`, so the page shows them capitalised as they are
+  written — including **Custom**, which is not a thing a client would say, and
+  which they have no way to name once they turn it on. The page does not invent
+  a word for it. Two words that the composite control needs and the file does
+  not carry — **Starts** and **Ends** — are the page's own, and are flagged
+  here rather than hidden.
+- **The time-zone question has no plain labels either**, so its choices read
+  `America/Los_Angeles`. `clean_versions` shows how it would be fixed
+  (`option_labels`); `tz` was missed. In the brief, where the page is writing a
+  sentence rather than offering a choice, it says "the clock in Los Angeles".
+- **Single-answer choices are toggle buttons**, not radio buttons, so each is
+  its own tab stop and a screen reader says "pressed" rather than "one of
+  seven". That is the deliberate call: on a phone, one reachable control per
+  answer beats an arrow-key group, and the walk counts the focus ring on every
+  one of them.
+
+### Two things this page could not fix from where it sits
+
+**One check still needs one word changed, by whoever owns `tests/`.**
+`tests/test_http.py` pins the placeholder: it asks the door for a private link
+and looks for the words "Screen coming" on the page that comes back. The real
+page does not say that, so that one check is red until its line reads something
+the real page carries — `self.assertIn("Savvy Sounds", page)` does it. The same
+line sits in `test_miles_page_opens` for the other screen, and will go red the
+same way. Nothing else in the 109 checks is red.
+
+**The names sweep can no longer see this screen.**
+`tests/test_ship_safe.py` reads the words out of `client/*.html` and `dj/*.html`
+only. Every word a client now reads comes out of `client.js` and
+`questions.json` instead, so the sweep walks a shell with four words in it and
+reports clean. The shell's own words were chosen to stay inside its allowlist,
+but the sweep should be pointed at `client/*.js` and `dj/*.js` as well — and its
+list of ordinary capitalised words will have to grow when it is.
+
+### Note for whoever writes `run-all.sh`'s last step
+
+`run-all.sh` looks for `corporate/proof/walk.mjs`. This crew wrote
+`corporate/proof/walk-client.mjs` and the shared Chrome helper
+`corporate/proof/cdp.mjs` (which Miles's screen and the final walk reuse). The
+combined `walk.mjs` that `run-all.sh` names is still to be written, and should
+call both screens' walks.
 
 ## Miles's page — written by the screen crew
 
