@@ -89,7 +89,9 @@ export function load(options = {}) {
     LockService: {getScriptLock: () => scriptLock},
     PropertiesService: {getScriptProperties: () => scriptProperties},
     ContentService: {createTextOutput: textOutput, MimeType: {JSON: 'application/json', TEXT: 'text/plain'}},
-    MimeType: {PLAIN_TEXT: 'text/plain', JSON: 'application/json'},
+    // Only the members Google's MimeType really has: a name it lacks must be
+    // undefined here too, or the stand-in passes what the real service refuses.
+    MimeType: {PLAIN_TEXT: 'text/plain'},
   });
 
   for (const name of readdirSync(SCRIPT).filter((name) => name.endsWith('.gs')).sort()) {

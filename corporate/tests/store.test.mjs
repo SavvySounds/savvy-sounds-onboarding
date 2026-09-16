@@ -302,3 +302,15 @@ describe('Wiping', {concurrency: false}, () => {
     assert.equal(store.root().getFilesByName('somebody-elses-work.txt').hasNext(), true);
   }));
 });
+
+describe('Google file types', () => {
+  test('the script never asks Drive for a file type Google does not have', () => {
+    // Found on the real service 2026-09-16: MimeType.JSON is not a thing there,
+    // and the stand-in had quietly invented it.
+    const source = readFileSync(join(HERE, '..', 'script', 'store.gs'), 'utf8');
+    for (const line of source.split('\n')) {
+      if (/createFile\(/.test(line)) assert.ok(!/\bMimeType\.(?!PLAIN_TEXT\b)/.test(line), line.trim());
+    }
+    assert.ok(/createFile\([^\n]*"application\/json"/.test(source), 'the JSON files are typed in words');
+  });
+});

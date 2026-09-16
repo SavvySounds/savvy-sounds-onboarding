@@ -53,7 +53,9 @@ function _write_json(name, obj) {
   var text = JSON.stringify(obj, null, 2);
   var file = _file_named(name);
   if (file) file.setContent(text);
-  else root().createFile(name, text, MimeType.JSON);
+  // Google's MimeType has no JSON member (found on the real service 2026-09-16:
+  // "Argument cannot be null: mimeType"); the type goes in as its own words.
+  else root().createFile(name, text, "application/json");
 }
 
 function _read_json(name, fallback) {
