@@ -191,6 +191,15 @@
     catch (no) { return ''; }
   }
 
+  // The door answers a link from the corporate folder down ("/corporate/client/#…").
+  // The folder itself lives wherever THIS page lives: at the root of the custom
+  // domain, but under the repo's name on github.io — so the address is built
+  // from this page's own path, never from the origin alone. Found 2026-09-16 on
+  // the first live booking: the link printed pointed one folder too high.
+  function clientLink(link) {
+    var here = window.location.pathname.replace(/corporate\/dj\/?[^/]*$/, '');
+    return window.location.origin + here + String(link || '').replace(/^\/corporate\//, 'corporate/');
+  }
   function optionWords(qid, value) {
     var question = questionById(qid);
     return question ? ((question.option_labels || {})[value] || '') : '';
@@ -643,7 +652,7 @@
       ].concat(Object.keys(state.booking.links).sort().map(function (role) {
         var person = state.booking.people[role];
         return copyLine((person ? person.name : ROLE_WORDS[role]) + ' · ' + ROLE_WORDS[role],
-                        window.location.origin + state.booking.links[role],
+                        clientLink(state.booking.links[role]),
                         'the link for ' + (person ? person.name : role));
       })).concat([
         el('div', { class: 'doing' }, [
