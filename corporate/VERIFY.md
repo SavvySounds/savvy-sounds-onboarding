@@ -616,7 +616,21 @@ this same home, so its address ALSO becomes
 holds still lands (GitHub redirects the old address), but the address they see
 changes. The form itself is untouched, byte for byte.
 
-### 3. Prove it is live (Fable, after your clicks)
+### 3. Prove it is live (Fable, after your clicks) — done 2026-09-16 on the github.io address
+
+Walked on the live pages with the script as their home: the overview opened with
+the pass and said "No bookings yet"; a practice booking (the invented Harbor
+Studio names) was started from it and its private link printed; that link
+opened on a phone-sized window, one answer typed, the bottom line read
+"Saved · revision 2" and the events door answered revision 2 for it; the link
+was revoked through the door and the phone then read "This link has expired —
+ask Miles for a fresh one." Two defects found and fixed on the way: the script
+asked Drive for a file type Google does not have (3e14de4), and the private
+link was built from the origin alone, one folder too high on github.io
+(6118283). **Still missing:** his page has no control to revoke a link — the
+door exists (`/api/dj/access` with `{revoke}`), the button does not; until it
+is built, a link is taken back with the curl line in this section.
+
 
 - `curl -s https://clients-prep.savvysoundscollective.com/corporate/home.js`
   prints the script address, not the placeholder.
