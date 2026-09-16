@@ -464,6 +464,7 @@ async function main() {
     await noSidewaysScroll(page, PHONE);
     await page.shot('phone-after-settling');
 
+    await linkControlChecks(page, base, doors, northstar.event_id);
     await bookingZoneChecks(page, base, doors);
     await biggerTextChecks(page, base, northstar.event_id);
     await stillWithReducedMotion(page);
@@ -879,6 +880,38 @@ async function ownItemChecks(page, eventId, doors) {
   mark(String(item.answer || '').startsWith('Something slow'), 'and what he wrote is what was kept');
   const stillThere = await page.read(`document.body.textContent.includes(${JSON.stringify(mine.question.slice(0, 30))})`);
   mark(!stillThere, 'and it is off the screen');
+}
+
+async function linkControlChecks(page, base, doors, eventId) {
+  // "New link for Theo" hands out a link that opens; "Take back Theo's links"
+  // closes every one of his, and nobody else's.
+  await page.goto(`${base}/corporate/dj/#/e/${eventId}`);
+  await page.waitFor('document.querySelectorAll("section.block").length > 3', 'the event to paint');
+  const knock = async (token) => (await fetch(`http://127.0.0.1:${Number(new URL(base).port) + 3}/macros/s/local/exec`, {
+    method: 'POST', headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+    body: JSON.stringify({ door: '/api/me', token, body: {} })
+  })).json();
+  await page.read(`Array.from(document.querySelectorAll('button'))
+    .find((b) => b.textContent.trim() === 'New link for Theo').click(); true`);
+  await page.waitFor(`document.body.textContent.includes('Fresh link made')`, 'the fresh link to land');
+  const fresh = await page.read(`(() => {
+    const box = document.querySelector('.links-for[data-person="p_theo"]');
+    const text = box ? box.textContent : '';
+    const m = text.match(/#([0-9a-f]{32})/);
+    return { link: m ? m[0] : '', token: m ? m[1] : '', words: text.includes('old ones still work') };
+  })()`);
+  mark(!!fresh.token && (await knock(fresh.token)).status === 200, `a fresh link for Theo opens — ${fresh.link.slice(0, 12)}…`);
+  mark(fresh.link.startsWith('#') && (await page.read(`document.querySelector('.links-for[data-person="p_theo"]').textContent`)).includes(`${base}/corporate/client/#`),
+    'and it is printed as a full address under this page\'s own folder');
+  const jules = (await doors(`/api/events/${eventId}`)).people.find((p) => p.person_id === 'p_jules');
+  const julesToken = (await doors('/api/dj/access', { body: { event_id: eventId, person_id: 'p_jules', role: jules.role } })).token;
+  await page.read(`Array.from(document.querySelectorAll('button'))
+    .find((b) => b.textContent.trim().startsWith('Take back Theo')).click(); true`);
+  await page.waitFor(`document.body.textContent.includes('Taken back:')`, 'the take-back to land');
+  const words = await page.read(`document.querySelector('.links-for[data-person="p_theo"] [role=status]').textContent`);
+  mark(/Taken back: \d+ links? for Theo Marsh/.test(words), `the page says what happened — "${words.slice(0, 60)}"`);
+  mark((await knock(fresh.token)).status === 403, 'and the fresh link no longer opens anything');
+  mark((await knock(julesToken)).status === 200, 'while Jules\'s link still does');
 }
 
 async function bookingZoneChecks(page, base, doors) {

@@ -152,6 +152,11 @@ function route(door, who, body) {
   if (door === "/api/dj/access") {
     if (who.role !== "dj") return [403, {ok: false, error: "not-allowed"}];
     if (body.revoke) return [200, access("revoke", {token: body.revoke})];
+    if (body.revoke_person) {
+      var who_ = body.revoke_person || {};
+      if (!STORE_EVENT_ID.test(String(who_.event_id || "")) || !who_.person_id) return [422, {ok: false, error: "invalid"}];
+      return [200, access("revoke_person", {event_id: who_.event_id, person_id: who_.person_id})];
+    }
     return [200, access("mint", {event_id: body.event_id, person_id: body.person_id,
       role: body.role, expires_at: body.expires_at})];
   }

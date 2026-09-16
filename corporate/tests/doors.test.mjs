@@ -208,6 +208,21 @@ describe('Doors', {concurrency: false}, () => {
     assert.ok(!answer.text.includes('America/'), 'the sheet never shows a zone as a file name');
   }));
 
+  test('Miles can take back every link one person holds, and only Miles', () => prepared((g, dj, {event, tokens}) => {
+    const second = g.access('mint', {event_id: event.event_id, person_id: 'p_theo', role: 'approver'}).token;
+    assert.equal(knock(g, '/api/me', second).status, 200);
+    const refused = knock(g, '/api/dj/access', tokens.planner, {revoke_person: {event_id: event.event_id, person_id: 'p_theo'}});
+    assert.equal(refused.status, 403);
+    const taken = knock(g, '/api/dj/access', dj, {revoke_person: {event_id: event.event_id, person_id: 'p_theo'}});
+    assert.equal(taken.status, 200); assert.equal(taken.taken, 2);
+    assert.equal(knock(g, '/api/me', tokens.approver).status, 403);
+    assert.equal(knock(g, '/api/me', second).status, 403);
+    assert.equal(knock(g, '/api/me', tokens.planner).status, 200, 'nobody else lost a link');
+    const again = knock(g, '/api/dj/access', dj, {revoke_person: {event_id: event.event_id, person_id: 'p_theo'}});
+    assert.equal(again.taken, 0);
+    assert.equal(knock(g, '/api/dj/access', dj, {revoke_person: {event_id: '../x', person_id: 'p_theo'}}).status, 422);
+  }));
+
   test('a client cannot pull the day sheet', () => prepared((g, dj, {event, tokens}) => {
     const answer = knock(g, `/api/events/${event.event_id}/daysheet`, tokens.approver); assert.equal(answer.status, 403); assert.equal(answer.error, 'not-allowed');
   }));

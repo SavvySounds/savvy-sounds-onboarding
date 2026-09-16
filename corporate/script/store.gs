@@ -532,6 +532,16 @@ function access(op, kw) {
       if (!grant) return {ok: false, error: "link-expired"};
       grant.revoked_at = now(); _write_json(_access_path(), book); return {ok: true};
     }
+    if (op === "revoke_person") {
+      // Every live link this person holds on this event, taken back at once.
+      var taken = 0;
+      Object.keys(book.tokens || {}).forEach(function (held) {
+        var g = book.tokens[held];
+        if (g.event_id === kw.event_id && g.person_id === kw.person_id && !g.revoked_at) { g.revoked_at = now(); taken += 1; }
+      });
+      if (taken) _write_json(_access_path(), book);
+      return {ok: true, taken: taken};
+    }
     if (op === "dj") {
       if (!book.dj_token) { book.dj_token = Utilities.getUuid().replace(/-/g, ""); _write_json(_access_path(), book); }
       return {ok: true, token: book.dj_token, link: "/corporate/dj/"};

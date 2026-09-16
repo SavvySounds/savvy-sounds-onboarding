@@ -931,6 +931,7 @@
       ];
       if (person.email) bits.push(copyLine('email', person.email, person.name + '’s email'));
       if (person.phone) bits.push(copyLine('phone', person.phone, person.name + '’s phone'));
+      bits.push(linkControls(event, person));
       return el('div', { class: 'row' }, bits);
     });
 
@@ -940,6 +941,45 @@
     ].concat(blocks, [
       el('div', { class: 'row' }, [el('h3', { text: 'Who is on it' })].concat(people))
     ]));
+  }
+
+  // A fresh private link for one person, or every link they hold taken back.
+  // The words say what happened; nothing here is undoable, so each says so.
+  var linkNews = {};
+  function linkControls(event, person) {
+    var key = event.event_id + '|' + person.person_id;
+    var news = linkNews[key] || {};
+    var box = el('div', { class: 'links-for', 'data-person': person.person_id }, [
+      el('div', { class: 'doing' }, [
+        el('button', { class: 'plain', type: 'button', text: 'New link for ' + person.name.split(' ')[0],
+          onclick: function () {
+            door('/api/dj/access', { body: { event_id: event.event_id, person_id: person.person_id, role: person.role } })
+              .then(function (answer) {
+                if (expired(answer)) return;
+                linkNews[key] = answer.code === 200 && answer.body.ok
+                  ? { link: clientLink(answer.body.link), words: 'Fresh link made. The old ones still work until you take them back.' }
+                  : { words: why(answer) };
+                paint();
+              });
+          } }),
+        el('button', { class: 'plain', type: 'button', text: 'Take back ' + person.name.split(' ')[0] + '’s links',
+          onclick: function () {
+            door('/api/dj/access', { body: { revoke_person: { event_id: event.event_id, person_id: person.person_id } } })
+              .then(function (answer) {
+                if (expired(answer)) return;
+                linkNews[key] = answer.code === 200 && answer.body.ok
+                  ? { words: answer.body.taken
+                      ? 'Taken back: ' + answer.body.taken + (answer.body.taken === 1 ? ' link' : ' links') + ' for ' + person.name + ' no longer open anything. Make a new one when you are ready.'
+                      : person.name + ' held no live link.' }
+                  : { words: why(answer) };
+                paint();
+              });
+          } })
+      ])
+    ]);
+    if (news.words) box.appendChild(el('p', { class: 'quiet', role: 'status', text: news.words }));
+    if (news.link) box.appendChild(copyLine('the new link', news.link, 'the new link for ' + person.name));
+    return box;
   }
 
   function runningOrder(event) {
