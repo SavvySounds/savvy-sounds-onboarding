@@ -428,7 +428,7 @@ function effects(before, after, questions) {
     added = added.filter((item) => !(item.moments || []).some((mid) => gone.has(mid)));
   }
 
-  // --- an answer lands on "Not sure yet" or "Miles to suggest"
+  // --- an answer lands on "Not sure yet" or "DJ's choice"
   const qmap = {};
   for (const q of questions) qmap[q.id] = q;
   for (const [qid, answer] of Object.entries(after.answers || {})) {

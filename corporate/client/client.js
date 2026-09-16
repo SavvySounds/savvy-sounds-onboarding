@@ -848,7 +848,7 @@
     var gaps = missing();
     if (gaps.length) {
       var warn = el('div', {class: 'note warn'}, [
-        el('p', {style: 'margin:0 0 6px', text: 'Still needed before this can go:'})
+        el('p', {style: 'margin:0 0 6px', text: 'Required info:'})
       ]);
       var list = el('ul', {style: 'margin:0; padding-left:20px'});
       gaps.forEach(function (q) {

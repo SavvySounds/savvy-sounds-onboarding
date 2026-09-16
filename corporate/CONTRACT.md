@@ -52,7 +52,7 @@ section that points at `corporate/VERIFY.md` (the feature's own recipe).
 | `blank` | never answered |
 | `none` | deliberately none ("No do-not-plays") |
 | `unknown` | "Not sure yet" — generates an open item |
-| `miles` | "Miles to suggest" — generates an open item owned by `dj` |
+| `miles` | "DJ's choice" — generates an open item owned by `dj` |
 | `confirmed` | a real answer, supplied by someone |
 
 ### Roles (people[].role)

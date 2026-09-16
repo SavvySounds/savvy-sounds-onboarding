@@ -51,7 +51,7 @@ SAFE_WORDS = {
     "There", "UI", "UTC", "Walk-on",
     # the plain words for the parts of the night and the zones, and the practice raffle
     "Guests", "Mingling", "Speeches", "Wrapping", "What", "Raffle", "Ten", "Charity",
-    "Central", "Eastern", "Mountain", "Arizona", "Hawaii", "Somewhere",
+    "Central", "Eastern", "Mountain", "Arizona", "Hawaii", "Somewhere", "DJ's", "DJ", "Required",
 }
 
 # The exact song lines the pretend events carry.  Famous records, pinned.

@@ -55,7 +55,7 @@
   // The words for a part of the night and for a time zone are questions.json's
   // (kindWords, zoneWords below), never a table of this file's own.
   var STATE_WORDS = {
-    unknown: 'not sure yet', miles: 'you are to suggest this',
+    unknown: 'not sure yet', miles: 'DJ\'s choice',
     none: 'none', blank: 'not answered'
   };
   var WHY = {
