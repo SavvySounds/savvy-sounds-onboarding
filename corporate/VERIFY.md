@@ -73,7 +73,7 @@ clipboard must not change a byte).
     node --test corporate/tests/*.test.mjs
 
 One file per piece of the script, one `describe` per subject, every check
-named in words. Expect `pass 115`, `fail 0`, `skipped 0` in well under two
+named in words. Expect `pass 120`, `fail 0`, `skipped 0` in well under two
 seconds. Among them:
 
 - `rules.test.mjs` — every rule (while the port was being made, a parity
@@ -141,8 +141,8 @@ scratch folder; two real surnames are pinned by fingerprint and must not appear.
 Every needle is counted against the source before anything runs (a quote that
 matches nowhere or twice stops the run in words); the unbroken checks run
 first and a red baseline refuses to go on; each break gets a fresh copy of the
-folder in a temp directory the runner owns. Expect `38 of 38 caught.` (13 in
-the rules, 13 in the writer, 8 in the doors, 2 in the day sheet, 2 in the
+folder in a temp directory the runner owns. Expect `39 of 39 caught.` (13 in
+the rules, 14 in the writer, 8 in the doors, 2 in the day sheet, 2 in the
 stand-in's Host seam).
 
 ---
@@ -151,8 +151,8 @@ stand-in's Host seam).
 
     corporate/run-all.sh
 
-Five steps. The two sweeps, then the checks (115), then the breaking-on-purpose
-(38), then `corporate/proof/walk.mjs`: the client walk (the networking event at
+Five steps. The two sweeps, then the checks (120), then the breaking-on-purpose
+(39), then `corporate/proof/walk.mjs`: the client walk (the networking event at
 phone width) and Miles's walk against one shared stand-in on 8794, then the
 Stage 1 loop itself — the planner moves the awards start 8:00 PM → 8:15 PM on
 the real page, Miles sees both times with Jules named and takes it, the
@@ -400,7 +400,7 @@ prints one line per reading with the number it measured. Nothing pops up,
 nothing makes a sound, and it kills its own server and its own Chrome before it
 prints the last line.
 
-Expect the last line to read **110 of 110 readings passed**, and pictures of
+Expect the last line to read **115 of 115 readings passed**, and pictures of
 the real screen in `corporate/proof/frames/` (not committed).
 
 What it measures, and what it read on 2026-09-14 (the last four rows added
@@ -429,6 +429,7 @@ What it measures, and what it read on 2026-09-14 (the last four rows added
 | the zone, in words | "Central time (Chicago)" from `questions.json`, and no `America/` anywhere on the page or the sheet |
 | the part the client named | "Raffle" on his running order and on the day sheet, never "Custom" or a made-up phrase |
 | the zone picker on "Start a booking" | the form's six zones, each in the form's words, and "Somewhere else" left off |
+| the link controls under "Who is on it" | "New link for Theo" prints a full address under this page's folder and it opens; "Take back Theo's links" says "Taken back: 2 links…", both of his stop opening, Jules's still does |
 
 **This walk is in `corporate/run-all.sh` twice over:** once inside
 `corporate/proof/walk.mjs` against the shared stand-in on 8794, and once on
@@ -527,6 +528,9 @@ and a mechanical one that measured the live page in a browser.
   one tool are decided together, not in this folder alone.
 - His own notes are shown, not editable. Writing them needs a door that does
   not exist yet.
+- Taking a person's links back has no "are you sure": the words after say
+  exactly what happened and "New link" is one press away, so a slip costs one
+  press, not a lost client.
 - Taking a proposal cannot be undone from this page. Both values are on screen
   before the tap and in the sentence afterwards, and the change log keeps what
   it was — but putting it back needs an edit this screen does not have.
@@ -599,6 +603,13 @@ holding `access.json`; each booking adds `ev_….json` and `ev_….changes.jsonl
 
 ### 2. Put the pages on the address (about five minutes, after step 1)
 
+**2026-09-16 evening:** step 1 of this list is done (home.js filled and pushed);
+step 2 is done (the custom domain is set in Pages and GitHub's `CNAME` commit
+is on main); step 3, the record at the domain's DNS, is Miles's — the DNS lives
+behind his Squarespace Domains login (the googledomains name servers), which
+Fable cannot sign into. Until that record exists the pages live at
+`https://savvysounds.github.io/savvy-sounds-onboarding/`.
+
 1. The line in `corporate/home.js` is filled in (Fable) and committed; you
    press the push (that is the live button for the pages).
 2. GitHub → the repo → **Settings → Pages → Custom domain**: type
@@ -627,9 +638,8 @@ was revoked through the door and the phone then read "This link has expired —
 ask Miles for a fresh one." Two defects found and fixed on the way: the script
 asked Drive for a file type Google does not have (3e14de4), and the private
 link was built from the origin alone, one folder too high on github.io
-(6118283). **Still missing:** his page has no control to revoke a link — the
-door exists (`/api/dj/access` with `{revoke}`), the button does not; until it
-is built, a link is taken back with the curl line in this section.
+(6118283). The page's own controls for links ("New link for …", "Take back
+…'s links", under "Who is on it") landed the same evening (c7913f4).
 
 
 - `curl -s https://clients-prep.savvysoundscollective.com/corporate/home.js`
