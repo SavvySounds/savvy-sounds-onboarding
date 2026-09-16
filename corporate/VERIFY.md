@@ -559,10 +559,16 @@ to empty that folder if it finds anything in it that this tool did not make.
 
 ---
 
-## Going live (Miles's hands; nothing here has been pressed yet)
+## Going live (step 1 done 2026-09-16; step 2 is Miles's push and the address)
 
-Everything below is the exact set of clicks. Nothing in this folder does any
-of them; the local proof runs against a stand-in of Google on this Mac.
+Everything below is the exact set of clicks; the local proof runs against a
+stand-in of Google on this Mac. **Step 1 was done on 2026-09-16** in the
+milesdipaola@gmail.com account: project "Savvy corporate prep", `setup` run
+(the folder exists in Drive), deployed as a web app (Me / Anyone), and the
+address is on the one line in `home.js`. The first `setup` run failed on a
+file type Google does not have (`MimeType.JSON`); fixed in 3e14de4. Step 3's
+curl lines were run the same day: the stranger got `403 link-expired`, the
+pass got `{"status":200,"ok":true,"events":[]}`.
 
 ### 1. Put the script into your Google account (about three minutes)
 
