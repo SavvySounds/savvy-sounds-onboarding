@@ -603,11 +603,17 @@ holding `access.json`; each booking adds `ev_….json` and `ev_….changes.jsonl
 
 ### 2. Put the pages on the address (about five minutes, after step 1)
 
-**2026-09-16 evening:** step 1 of this list is done (home.js filled and pushed);
-step 2 is done (the custom domain is set in Pages and GitHub's `CNAME` commit
-is on main); step 3, the record at the domain's DNS, is Miles's — the DNS lives
-behind his Squarespace Domains login (the googledomains name servers), which
-Fable cannot sign into. Until that record exists the pages live at
+**Order matters, learned the hard way 2026-09-16:** the DNS record goes in
+FIRST, then the custom domain in Pages. Setting the custom domain first made
+GitHub redirect the WHOLE site — the wedding form included — to an address
+that did not resolve yet; the site was down for about four minutes until the
+custom domain was taken off again (GitHub's own "Create CNAME" / "Delete CNAME"
+commits on main are that). So: (1) the CNAME record at the domain's DNS — it
+lives behind Miles's Squarespace Domains login, which Fable cannot sign into;
+(2) only when `dig +short CNAME clients-prep.savvysoundscollective.com` answers
+`savvysounds.github.io.`, the custom domain in Pages; (3) Enforce HTTPS once
+the green check shows. Step 1 of this list (home.js) is done and pushed. Until
+the record exists the pages live at
 `https://savvysounds.github.io/savvy-sounds-onboarding/`.
 
 1. The line in `corporate/home.js` is filled in (Fable) and committed; you
