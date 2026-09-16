@@ -73,19 +73,26 @@ clipboard must not change a byte).
     node --test corporate/tests/*.test.mjs
 
 One file per piece of the script, one `describe` per subject, every check
-named in words. Expect `pass 113`, `fail 0`, `skipped 0` in well under two
+named in words. Expect `pass 115`, `fail 0`, `skipped 0` in well under two
 seconds. Among them:
 
 - `rules.test.mjs` — every rule (while the port was being made, a parity
   check ran the old Python brain beside it on both practice events and diffed
-  every answer; it went with the Python once the two agreed).
+  every answer; it went with the Python once the two agreed). Also the words:
+  every part of the night and every time zone in `questions.json` has plain
+  words of its own (a zone's never spelled like a file name), and the words
+  the moments control needs — Starts, Ends, "What is it?" — are in that file,
+  not in the page.
 - `store.test.mjs` — receipts, repeat sends, both values on a clash,
   proposals, the four states after a round trip, a half-written history
   line, the last good answer standing after a cut-off write, and the lock:
   four node processes saving on one event at once land all twenty saves on
   twenty distinct revisions.
 - `doors.test.mjs`, `private.test.mjs` — every door with the right and the
-  wrong link; Miles's notes and other people's details never reach a client.
+  wrong link; Miles's notes and other people's details never reach a client;
+  the brief and the day sheet carry the name a client gave "Something else"
+  (the practice raffle) and say the zone as "Central time (Chicago)", never
+  `America/Chicago`.
 - `standin.test.mjs` — the stand-in on a private port: a foreign `Host` is
   turned away on both doors, a path cannot climb out, the answer comes
   through the redirect with the header a browser needs, once.
@@ -134,8 +141,9 @@ scratch folder; two real surnames are pinned by fingerprint and must not appear.
 Every needle is counted against the source before anything runs (a quote that
 matches nowhere or twice stops the run in words); the unbroken checks run
 first and a red baseline refuses to go on; each break gets a fresh copy of the
-folder in a temp directory the runner owns. Expect `37 of 37 caught.` (13 in the rules, 14 in the writer, 8 in the doors,
-1 in the day sheet, 2 in the stand-in's Host seam).
+folder in a temp directory the runner owns. Expect `38 of 38 caught.` (13 in
+the rules, 13 in the writer, 8 in the doors, 2 in the day sheet, 2 in the
+stand-in's Host seam).
 
 ---
 
@@ -143,16 +151,20 @@ folder in a temp directory the runner owns. Expect `37 of 37 caught.` (13 in the
 
     corporate/run-all.sh
 
-The two sweeps, then the checks (113), then the breaking-on-purpose, then
-`corporate/proof/walk.mjs`: the client walk and Miles's walk against one
-shared stand-in, then the Stage 1 loop itself — the planner moves the awards
-start 8:00 PM → 8:15 PM on the real page, Miles sees both times with Jules
-named and takes it, the approver's brief, Miles's view and the day sheet agree
-on one revision, the sheet marks the dancing block "into the next day", the
-CSV has no formula cell, and the networking event submits on a phone and shows
-its receipt. Red anywhere and the whole thing exits red.
+Five steps. The two sweeps, then the checks (115), then the breaking-on-purpose
+(38), then `corporate/proof/walk.mjs`: the client walk (the networking event at
+phone width) and Miles's walk against one shared stand-in on 8794, then the
+Stage 1 loop itself — the planner moves the awards start 8:00 PM → 8:15 PM on
+the real page, Miles sees both times with Jules named and takes it, the
+approver's brief, Miles's view and the day sheet agree on one revision, the
+sheet marks the dancing block "into the next day", the CSV has no formula cell,
+and the networking event submits on a phone and shows its receipt. Then, fifth,
+`corporate/proof/walk-dj.mjs` on its own: its own seed, its own server on 8800
+(never the preview's 8790/8793, never the shared walk's 8794/8797, so the two
+walks cannot meet even back to back). Red anywhere and the whole thing exits
+red — a red reading on Miles's page reds the run in its own named step.
 
-Takes about ten minutes. `CORP_GATE_ONLY=1 node corporate/proof/walk.mjs`
+Takes about twelve minutes. `CORP_GATE_ONLY=1 node corporate/proof/walk.mjs`
 reruns just the loop while fixing it (about two minutes).
 
 Every time a person reads is shown with AM or PM. The one rule lives in
@@ -205,6 +217,10 @@ Things worth doing by hand once:
 - Type half an answer and press **Back**, then **Next**. The half is still there.
 - Press "Not sure yet" under any question. The box goes quiet but the words
   stay on screen; press it again and they come back, live.
+- On **The moments**, turn "Something else" on. A box asks "What is it?";
+  type a name (a raffle, a toast) and that name — not "Custom", not
+  "Something else" — is what the read-back, the brief, Miles's page and the
+  day sheet all call it.
 - On **The moments**, turn Awards on, type into "How to say the tricky names",
   turn Awards off, turn it on again. The pronunciation is still there.
 - Stop the server (control-C), type something, wait two seconds: the bottom
@@ -222,7 +238,7 @@ headless Chrome. It walks **both** practice events at **390x844** and at
 **1440x900**, plus the planner's own screen on the awards event, and kills
 every process it started before it prints the last line.
 
-Expect the last line to read **175 of 175 checks passed** and one `PASS` line
+Expect the last line to read **217 of 217 checks passed** and one `PASS` line
 per check above it — the last of them says the walk left nothing of its own
 running, because one of its servers once sat on a random port for twenty
 minutes after a run. Any `FAIL` and it exits red. Frames land in
@@ -239,6 +255,17 @@ What it measures, in numbers, on the real screen:
 | Every control's height | 44px | all of them |
 | Page width against window width | never wider | **390 in 390**, **1440 in 1440**, every screen |
 | With motion turned down | arrives finished | opacity 1, no transform, 0 animations running |
+
+And in words: every part of the night on the form and every time zone on
+offer is the plain phrase `questions.json` gives it, in that file's order —
+"Guests arrive", "Something else", "Central time (Chicago)" — and nothing on
+the form, the read-back or the brief ever reads like a file name
+(`America/…`) or a bare word ("Custom"). The Starts and Ends words under a
+part of the night, and the "What is it?" that asks for a name, are read out
+of that file too. On the networking event (no planner, so the person who
+signs it off owns the running order) the walk types "Charity auction" into
+that box and reads it back off the booking, the read-back and the brief. On
+the awards event the box already holds the practice booking's own "Raffle".
 
 And in behaviour: the four answer states come back apart from each other
 (`blank` / `none` / `unknown` / `confirmed`); a refresh mid-form brings the
@@ -279,6 +306,18 @@ copy, never with git: that eats work nobody meant to lose.
 `CORP_WALK_ONLY=harbor-390` narrows the walk to one event at one width while
 working; leave it off for the whole thing.
 
+Seen going red on 2026-09-16, one break at a time, restored from a copy each
+time: the chips drawing the bare word (`text: kind` in `momentsControl`) —
+"the parts of the night are the file's plain words" and "no part of the night
+is a bare word like Custom" both red, and the walk stopped there because no
+control said "Something else"; the name box writing nothing
+(`setMoment(kind, {})`) — "the name reaches the booking" red with `[""]`, and
+the read-back and the brief red after it; the brief spelling the zone the
+machine's way (`placeOf` returning the zone) — "the brief says which clock its
+times are on" red with `America/Los_Angeles`. And with the `moments` labels
+deleted from `questions.json`, `rules.test.mjs` goes red twice before any
+browser opens.
+
 ### What the two design passes found
 
 The finished screens went through a design review and an Apple-HIG usability
@@ -307,18 +346,19 @@ review, both reading the real frames. What changed because of them:
 
 ### Where this page refuses
 
-- **`questions.json` has no words for the parts of the night.** The `moments`
-  question lists `arrival`, `dinner`, `awards`, `custom` and the rest as bare
-  words with no `option_labels`, so the page shows them capitalised as they are
-  written — including **Custom**, which is not a thing a client would say, and
-  which they have no way to name once they turn it on. The page does not invent
-  a word for it. Two words that the composite control needs and the file does
-  not carry — **Starts** and **Ends** — are the page's own, and are flagged
-  here rather than hidden.
-- **The time-zone question has no plain labels either**, so its choices read
-  `America/Los_Angeles`. `clean_versions` shows how it would be fixed
-  (`option_labels`); `tz` was missed. In the brief, where the page is writing a
-  sentence rather than offering a choice, it says "the clock in Los Angeles".
+- **The parts of the night and the time zones wear `questions.json`'s words
+  and nothing else (fixed 2026-09-16).** The `moments` question's
+  `option_labels` name every part in plain words ("Guests arrive", "Wrapping
+  up", "Something else"); its `time_labels` carry Starts and Ends, and its
+  `custom_name` carries the "What is it?" box that lets a client name
+  "Something else" — that name is the part's own label from then on, on every
+  screen. The `tz` question's `option_labels` read "Pacific time (Los
+  Angeles)" and so on; the brief says "Every time below is Central time
+  (Chicago)." A zone the file does not list gets no words in the brief rather
+  than a machine's spelling. The page has no fallback word of its own for
+  either: a part with no label in the file would show its bare id, and the
+  check in `rules.test.mjs` plus the walk's chip readings make sure that
+  never ships.
 - **Single-answer choices are toggle buttons**, not radio buttons, so each is
   its own tab stop and a screen reader says "pressed" rather than "one of
   seven". That is the deliberate call: on a phone, one reachable control per
@@ -352,16 +392,19 @@ Every time on this page is shown with AM or PM; its one JavaScript spelling is
     node corporate/proof/walk-dj.mjs
 
 It takes about two minutes. It seeds its own practice store, starts its own
-server on port **8793** (never 8790, which is the preview's, and a busy 8793 is
-a RED walk, not a skipped one), opens a headless Chrome nobody can see, and
+server on port **8800** with its home on 8803 (never the preview's 8790/8793
+nor the shared soundcheck's 8794/8797 — it refuses the preview's two outright
+— and a busy 8800 is a RED walk, not a skipped one), opens a headless Chrome
+nobody can see, and
 prints one line per reading with the number it measured. Nothing pops up,
 nothing makes a sound, and it kills its own server and its own Chrome before it
 prints the last line.
 
-Expect the last line to read **94 of 94 readings passed**, and pictures of the
-real screen in `corporate/proof/frames/` (not committed).
+Expect the last line to read **110 of 110 readings passed**, and pictures of
+the real screen in `corporate/proof/frames/` (not committed).
 
-What it measures, and what it read on 2026-09-14:
+What it measures, and what it read on 2026-09-14 (the last four rows added
+2026-09-16):
 
 | Reading | Measured |
 |---|---|
@@ -383,12 +426,13 @@ What it measures, and what it read on 2026-09-14:
 | the words | every name on screen came from the booking or from the short list of words this page says in its own voice |
 | who owns which decision | the three tables in `dj/dj.js` are read out of `script/rules.gs` and compared |
 | somebody else's words | nothing on the page turns them into markup |
+| the zone, in words | "Central time (Chicago)" from `questions.json`, and no `America/` anywhere on the page or the sheet |
+| the part the client named | "Raffle" on his running order and on the day sheet, never "Custom" or a made-up phrase |
+| the zone picker on "Start a booking" | the form's six zones, each in the form's words, and "Somewhere else" left off |
 
-**This walk is not yet in `corporate/run-all.sh`.** That file runs the checks,
-then the breaking-on-purpose, then `corporate/proof/walk.mjs` — the client
-page's walk, written by the other desk. A walk nobody runs is not a guard, so
-whoever owns `run-all.sh` adds a line for `walk-dj.mjs` beside it. Until then
-this one is run by hand, with the command above.
+**This walk is in `corporate/run-all.sh` twice over:** once inside
+`corporate/proof/walk.mjs` against the shared stand-in on 8794, and once on
+its own as step 5 of 5, on 8800. A red reading in either reds the whole run.
 
 ### Prove the walk can see a break
 
@@ -407,6 +451,13 @@ and each line said what to repair. A fourth (a 700px minimum width in the
 stylesheet) turned the sideways-scroll reading red at 390 and named the three
 things hanging over the edge; a fifth (a Copy button that says "Copied" when
 the clipboard refused) turned the honesty reading red.
+
+Watched on 2026-09-16: `zoneWords` returning the raw zone and the running
+order drawing `kindWords(moment.kind)` instead of the moment's own label —
+five readings red (both zone lines on the phone, the "Raffle" line, and two
+on the booking form's picker), 105 of 110, nothing else. The day sheet's own
+two breaks (`_zone_words` returning the raw zone; `label: moment.kind`) each
+red one check in `doors.test.mjs`, and the first is a needle in `mutate.py`.
 
 ### What the walk caught that looking would not have
 

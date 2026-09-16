@@ -52,11 +52,8 @@
   var APPROVAL_WORDS = {
     draft: 'not settled', proposed: 'proposed', confirmed: 'settled'
   };
-  var KIND_WORDS = {
-    arrival: 'arrival', networking: 'networking', dinner: 'dinner',
-    presentations: 'presentations', awards: 'awards', dancing: 'dancing',
-    closing: 'closing', custom: 'part of the night'
-  };
+  // The words for a part of the night and for a time zone are questions.json's
+  // (kindWords, zoneWords below), never a table of this file's own.
   var STATE_WORDS = {
     unknown: 'not sure yet', miles: 'you are to suggest this',
     none: 'none', blank: 'not answered'
@@ -194,10 +191,18 @@
     catch (no) { return ''; }
   }
 
+  function optionWords(qid, value) {
+    var question = questionById(qid);
+    return question ? ((question.option_labels || {})[value] || '') : '';
+  }
   function zoneWords(tz) {
     if (!tz) return '';
-    var tail = String(tz).split('/').pop().replace(/_/g, ' ');
-    return tail + ' time';
+    // A zone questions.json does not list (this Mac's own, say) is still
+    // said as a place, never as a file name.
+    return optionWords('tz', tz) || String(tz).split('/').pop().replace(/_/g, ' ') + ' time';
+  }
+  function kindWords(kind) {
+    return optionWords('moments', kind) || String(kind || '');
   }
 
   function foreignZone(tz) {
@@ -592,9 +597,10 @@
       ]);
     }
 
-    var zones = ['America/Los_Angeles', 'America/Denver', 'America/Chicago',
-                 'America/New_York', 'America/Phoenix', 'America/Anchorage',
-                 'Pacific/Honolulu'];
+    // The zones on offer are the form's own list, minus the one that is not a zone.
+    var zones = ((questionById('tz') || {}).options || []).filter(function (zone) {
+      return zone.indexOf('/') >= 0;
+    });
     var mine = macZone();
     if (mine && zones.indexOf(mine) < 0) zones.unshift(mine);
     if (!draft.tz) draft.tz = mine || 'America/Los_Angeles';
@@ -950,10 +956,10 @@
         : Number(moment.duration_min || 0);
       var what = [
         el('h3', {}, [
-          document.createTextNode(moment.label || KIND_WORDS[moment.kind] || 'part of the night'),
+          document.createTextNode(moment.label || kindWords(moment.kind)),
           recheck[moment.moment_id] ? el('span', { class: 'tag check', text: 'check this cue' }) : null
         ]),
-        el('p', { class: 'where', text: [KIND_WORDS[moment.kind] || moment.kind,
+        el('p', { class: 'where', text: [kindWords(moment.kind),
           moment.room, APPROVAL_WORDS[moment.approval] || moment.approval]
           .filter(Boolean).join(' · ') }),
         moment.purpose ? el('p', { class: 'quiet verbatim', text: moment.purpose }) : null

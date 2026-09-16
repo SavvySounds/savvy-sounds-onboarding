@@ -16,6 +16,12 @@ function _as_list(value) {
   return values.map(String).filter(function (item) { return item.trim(); });
 }
 function _mac_zone() { return Session.getScriptTimeZone(); }
+function _zone_words(tz) {
+  // The plain words for a zone are questions.json's; a zone it does not list
+  // is still said as a place, never as a file name.
+  var question = (load_questions().questions || []).filter(function (q) { return q.id === "tz"; })[0] || {};
+  return (question.option_labels || {})[tz] || String(tz || "").split("/").pop().replace(/_/g, " ") + " time";
+}
 function _times(event) {
   return placed(event.moments || []).map(function (moment) {
     var start = moment.start || "", when = clock(start);
@@ -50,13 +56,13 @@ function _ul(items, empty) {
 
 function html_sheet(event, built_at) {
   var built = built_at || new Date().toISOString().slice(0, 16).replace("T", " ") + " UTC";
-  var zone = event.tz || "unknown", times = _times(event), people = event.people || [];
+  var zone = event.tz || "", times = _times(event), people = event.people || [];
   var items = _open_items(event), sources = event.sources || [], name = _event_name(event);
   var out = ["<title>Day sheet \u2014 " + _e(name) + "</title>", "<style>" + CSS + "</style>",
     '<div class="wrap">', "<h1>" + _e(name) + "</h1>",
     '<p class="built">Printed ' + _e(built) + " \u00b7 this is a snapshot of revision " + _e(event.revision) + ", not a live page.</p>",
     '<p class="built">Sources: ' + (sources.length ? _e(sources.map(function (source) { return source.name || "?"; }).join(", ")) : '<span class="none">none attached yet</span>') + "</p>",
-    '<p class="zone">All times are ' + _e(zone) + " time." + (zone === _mac_zone() ? "" : " That is not the zone this Mac is set to, so read the clock, not your watch.") + "</p>",
+    '<p class="zone">All times are ' + _e(zone ? _zone_words(zone) : "in a zone nobody has written down yet") + "." + (!zone || zone === _mac_zone() ? "" : " That is not the zone this Mac is set to, so read the clock, not your watch.") + "</p>",
     "<h2>Key times</h2>"];
   if (times.length) {
     out.push("<table><tr><th>Time</th><th>What</th><th>Room</th><th>Minutes</th><th>Music</th></tr>");
@@ -97,7 +103,7 @@ function _csv_cell(cell) {
   return /[,"\r\n]/.test(text) ? '"' + text.replace(/"/g, '""') + '"' : text;
 }
 function csv_sheet(event) {
-  var rows = [["Savvy Sounds day sheet", _event_name(event), "revision", event.revision, "zone", event.tz], [],
+  var rows = [["Savvy Sounds day sheet", _event_name(event), "revision", event.revision, "zone", _zone_words(event.tz)], [],
     ["Time", "What", "Room", "Minutes", "Music", "Cue words"]];
   _times(event).forEach(function (row) { rows.push([row.when, row.label, row.room, row.minutes,
     row.music_owner === "dj" ? "Miles" : row.music_owner, row.cue_text]); });

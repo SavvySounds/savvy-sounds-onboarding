@@ -337,8 +337,11 @@ async function main() {
   mkdirSync(store, { recursive: true });
   mkdirSync(profile, { recursive: true });
 
-  const port = Number(process.env.CORP_PORT || 8793);
-  if (port === 8790) refuse('this walk refuses the preview\'s own port');
+  // 8800 and its home 8803: clear of the preview's two doors (8790 and 8793)
+  // and of the shared soundcheck's (8794 and 8797), so this walk can run right
+  // after either of them, or beside the preview, and never meet them.
+  const port = Number(process.env.CORP_PORT || 8800);
+  if (port === 8790 || port === 8793) refuse('this walk refuses the preview\'s own ports (8790 and its home 8793)');
   if (!shared && !(await portIsFree(port))) {
     refuse(`port ${port} is busy, so this walk cannot run. Stop whatever holds it, or set CORP_PORT.`);
   }
@@ -461,6 +464,7 @@ async function main() {
     await noSidewaysScroll(page, PHONE);
     await page.shot('phone-after-settling');
 
+    await bookingZoneChecks(page, base, doors);
     await biggerTextChecks(page, base, northstar.event_id);
     await stillWithReducedMotion(page);
     await keyboardOnlyChecks(page, base, northstar.event_id);
@@ -610,7 +614,13 @@ async function eventReadingChecks(page, event, want) {
 
   // the private note, and the zone
   mark(text.includes(event.dj_notes.slice(0, 30)), `${want.name}: his own note is here`);
-  mark(text.includes('Chicago time'), `${want.name}: the event's own zone is named, because it is not this Mac's`);
+  mark(text.includes('Central time (Chicago)'), `${want.name}: the event's own zone is named in the form's plain words, because it is not this Mac's`);
+  mark(!text.includes('America/'), `${want.name}: no zone on his page reads like a file name`);
+
+  // the part of the night the client named themselves
+  mark(text.includes('Raffle'), `${want.name}: the part the client named ("Raffle") is on his running order under that name`);
+  mark(!/\bCustom\b/.test(text) && !text.includes('part of the night ·'),
+    `${want.name}: and it is never shown as "Custom" or as a made-up word of this page's`);
 
   // who is waiting on whom
   mark(text.includes('Waiting on Theo'), `${want.name}: the client side is named, not "the approver"`);
@@ -776,6 +786,9 @@ async function daySheetChecks(page, cdp, eventId, asMiles) {
     `the sheet carries the same revision as the view — ${event.revision}`);
   mark(/snapshot of revision/.test(sheet), 'and says in words that it is a snapshot, not a live page');
   mark(!sheet.includes(event.dj_notes.slice(0, 20)), 'and his private note is not on it');
+  mark(sheet.includes('Raffle'), 'the part the client named ("Raffle") is on the sheet under that name');
+  mark(sheet.includes('Central time (Chicago)') && !sheet.includes('America/'),
+    'the sheet says the zone in the form\'s plain words, never as a file name');
   for (const target of opened) {
     await fetch(`http://127.0.0.1:${cdp}/json/close/${target.id}`).catch(() => {});
   }
@@ -866,6 +879,25 @@ async function ownItemChecks(page, eventId, doors) {
   mark(String(item.answer || '').startsWith('Something slow'), 'and what he wrote is what was kept');
   const stillThere = await page.read(`document.body.textContent.includes(${JSON.stringify(mine.question.slice(0, 30))})`);
   mark(!stillThere, 'and it is off the screen');
+}
+
+async function bookingZoneChecks(page, base, doors) {
+  // The zone picker on "Start a booking" offers the form's own zones, in the
+  // form's plain words; the one option that is not a zone is left out.
+  const form = await doors('/api/questions');
+  const tz = (form.questions || []).find((q) => q.id === 'tz') || {};
+  const zones = (tz.options || []).filter((zone) => zone.includes('/'));
+  await page.goto(`${base}/corporate/dj/#/new`);
+  await page.waitFor('!!document.querySelector("#f-tz")', 'the booking form');
+  const options = await page.read(`Array.from(document.querySelectorAll('#f-tz option'))
+    .map((o) => ({ value: o.value, words: o.textContent.replace(' (yours)', '').trim() }))`);
+  const listed = options.filter((o) => zones.includes(o.value));
+  mark(listed.length === zones.length && zones.every((zone) => listed.some((o) => o.value === zone)),
+    `his booking form offers the form's ${zones.length} zones — ${listed.length} of them on the picker`);
+  mark(listed.every((o) => o.words === tz.option_labels[o.value]),
+    `and each one wears the form's plain words — ${listed.map((o) => o.words).join(' | ')}`);
+  mark(options.every((o) => !/[/_]/.test(o.words)), 'no zone on the picker reads like a file name');
+  mark(!options.some((o) => o.value === 'Other'), 'and "Somewhere else" is not a zone a booking can be started in');
 }
 
 async function biggerTextChecks(page, base, eventId) {

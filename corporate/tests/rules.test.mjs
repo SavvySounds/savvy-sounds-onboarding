@@ -43,16 +43,29 @@ describe('Question labels', () => {
   test('clock and moment choices have plain labels', () => {
     const questions = Object.fromEntries(QUESTIONS.map((q) => [q.id, q]));
     assert.deepEqual(questions.moments.option_labels, {
-      arrival: 'Arrival', networking: 'Networking', dinner: 'Dinner',
-      presentations: 'Presentations', awards: 'Awards', dancing: 'Dancing',
-      closing: 'Closing', custom: 'Something else'});
+      arrival: 'Guests arrive', networking: 'Mingling and networking', dinner: 'Dinner',
+      presentations: 'Speeches and presentations', awards: 'Awards', dancing: 'Dancing',
+      closing: 'Wrapping up', custom: 'Something else'});
     assert.deepEqual(questions.tz.option_labels, {
-      'America/Los_Angeles': 'Los Angeles (Pacific)',
-      'America/Denver': 'Denver (Mountain)',
-      'America/Phoenix': 'Phoenix (Mountain)',
-      'America/Chicago': 'Chicago (Central)',
-      'America/New_York': 'New York (Eastern)',
-      'Pacific/Honolulu': 'Honolulu (Hawaii)', Other: 'Something else'});
+      'America/Los_Angeles': 'Pacific time (Los Angeles)',
+      'America/Denver': 'Mountain time (Denver)',
+      'America/Phoenix': 'Arizona time (Phoenix, no clock change)',
+      'America/Chicago': 'Central time (Chicago)',
+      'America/New_York': 'Eastern time (New York)',
+      'Pacific/Honolulu': 'Hawaii time (Honolulu)', Other: 'Somewhere else'});
+  });
+  test('every part of the night and every zone has words of its own, and the control\'s words are in the file', () => {
+    const questions = Object.fromEntries(QUESTIONS.map((q) => [q.id, q]));
+    for (const kind of questions.moments.options) {
+      const words = (questions.moments.option_labels || {})[kind];
+      assert.ok(words && words !== kind, `${kind} has no plain words`);
+    }
+    for (const zone of questions.tz.options) {
+      const words = (questions.tz.option_labels || {})[zone];
+      assert.ok(words && words !== zone && !/[/_]/.test(words), `${zone} would show as a file name`);
+    }
+    assert.ok(questions.moments.time_labels.start && questions.moments.time_labels.end, 'the Starts and Ends words');
+    assert.ok(questions.moments.custom_name.label, 'the words asking the client to name "Something else"');
   });
 });
 

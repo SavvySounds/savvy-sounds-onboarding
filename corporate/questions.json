@@ -105,13 +105,13 @@
         "Other"
       ],
       "option_labels": {
-        "America/Los_Angeles": "Los Angeles (Pacific)",
-        "America/Denver": "Denver (Mountain)",
-        "America/Phoenix": "Phoenix (Mountain)",
-        "America/Chicago": "Chicago (Central)",
-        "America/New_York": "New York (Eastern)",
-        "Pacific/Honolulu": "Honolulu (Hawaii)",
-        "Other": "Something else"
+        "America/Los_Angeles": "Pacific time (Los Angeles)",
+        "America/Denver": "Mountain time (Denver)",
+        "America/Phoenix": "Arizona time (Phoenix, no clock change)",
+        "America/Chicago": "Central time (Chicago)",
+        "America/New_York": "Eastern time (New York)",
+        "Pacific/Honolulu": "Hawaii time (Honolulu)",
+        "Other": "Somewhere else"
       },
       "owner": "event",
       "required_to_submit": false,
@@ -412,14 +412,22 @@
         "custom"
       ],
       "option_labels": {
-        "arrival": "Arrival",
-        "networking": "Networking",
+        "arrival": "Guests arrive",
+        "networking": "Mingling and networking",
         "dinner": "Dinner",
-        "presentations": "Presentations",
+        "presentations": "Speeches and presentations",
         "awards": "Awards",
         "dancing": "Dancing",
-        "closing": "Closing",
+        "closing": "Wrapping up",
         "custom": "Something else"
+      },
+      "time_labels": {
+        "start": "Starts",
+        "end": "Ends"
+      },
+      "custom_name": {
+        "label": "What is it?",
+        "help": "Give it a name, like a raffle or a toast."
       },
       "owner": "running_order",
       "required_to_submit": false,

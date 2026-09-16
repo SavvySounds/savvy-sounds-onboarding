@@ -462,8 +462,63 @@ async function walk({ fixture, width, height, keepMine }) {
           backAgain === 'Typed and not yet sent.', JSON.stringify(backAgain));
     await waitStatus(page, 'Saved · revision');
 
-    // ---- the awards questions come and go without losing words ----------
+    // ---- the zone is offered in plain words, never as a file name ---------
+    const form = await (await fetch(`${base}/corporate/questions.json`)).json();
+    const byId = Object.fromEntries(form.questions.map((q) => [q.id, q]));
+    await gotoSection(page, 0);                        // Your event
+    const zoneChips = await page.evaluate("[...document.querySelectorAll('#f_tz .chip')].map(b => b.textContent.trim())");
+    check(`${tag} · the time zones on offer are the file's plain words, in the file's order`,
+          JSON.stringify(zoneChips) === JSON.stringify(byId.tz.options.map((zone) => byId.tz.option_labels[zone])),
+          zoneChips.join(' | '));
+    check(`${tag} · no zone on the form reads like a file name`,
+          zoneChips.length > 0 && zoneChips.every((words) => !/[/_]/.test(words)), zoneChips.join(' | '));
+
+    // ---- every part of the night wears the file's words -------------------
     await gotoSection(page, 4);                        // The moments
+    const partChips = await page.evaluate("[...document.querySelectorAll('#f_moments > .moment > .chip')].map(b => b.textContent.trim())");
+    check(`${tag} · the parts of the night are the file's plain words, in the file's order`,
+          JSON.stringify(partChips) === JSON.stringify(byId.moments.options.map((kind) => byId.moments.option_labels[kind])),
+          partChips.join(' | '));
+    check(`${tag} · no part of the night is a bare word like Custom`,
+          !partChips.some((words) => /^(custom|Custom)$/.test(words)), partChips.join(' | '));
+
+    // ---- "Something else" gets a name, and the name is the words on the review
+    const customOn = await page.evaluate("(document.querySelector('#m_custom')||{}).getAttribute('aria-pressed') === 'true'");
+    if (!customOn) { await pressWords(page, byId.moments.option_labels.custom); await sleep(200); }
+    const nameBox = await page.evaluate(`(() => {
+      const box = document.querySelector('#m_custom_name');
+      const label = document.querySelector('label[for="m_custom_name"]');
+      const times = [...document.querySelectorAll('#m_custom_start, #m_custom_end')]
+        .map((f) => (document.querySelector('label[for="' + f.id + '"]') || {}).textContent || '');
+      return { there: !!box, value: box ? box.value : null, label: label ? label.textContent : null, times };
+    })()`);
+    check(`${tag} · turning on "Something else" asks for its name, in the file's words`,
+          nameBox.there && nameBox.label === byId.moments.custom_name.label, JSON.stringify(nameBox));
+    check(`${tag} · the Starts and Ends words under a part of the night are the file's`,
+          JSON.stringify(nameBox.times) === JSON.stringify([byId.moments.time_labels.start, byId.moments.time_labels.end]),
+          nameBox.times.join(' | '));
+    // The awards event already holds a name ("Raffle"), and its planner owns
+    // the running order, so the approver typing a new one would only PROPOSE
+    // it. The networking event has no planner: there the approver's typed name
+    // is written, and that is where the typed path is proved.
+    let givenName = 'Raffle';
+    if (fixture.includes('northstar')) {
+      check(`${tag} · the name the booking already holds for it is in the box`, nameBox.value === 'Raffle', JSON.stringify(nameBox.value));
+    } else {
+      givenName = 'Charity auction';
+      await clearField(page, '#m_custom_name');
+      await typeInto(page, '#m_custom_name', givenName);
+      await sleep(200);
+      const typedName = await page.evaluate("(document.querySelector('#m_custom_name')||{}).value");
+      check(`${tag} · the name stays in the box while the page redraws`, typedName === givenName, JSON.stringify(typedName));
+      await waitStatus(page, 'Saved · revision');
+      const savedName = ((await door(base, approver.token, `/api/events/${eventId}`)).data.moments || [])
+        .filter((m) => m.kind === 'custom').map((m) => m.label);
+      check(`${tag} · the name reaches the booking as that part's own label`,
+            JSON.stringify(savedName) === JSON.stringify([givenName]), JSON.stringify(savedName));
+    }
+
+    // ---- the awards questions come and go without losing words ----------
     const awardsOn = async () => page.evaluate(`(() => {
       const node = [...document.querySelectorAll('#f_moments .chip')]
         .find(b => b.textContent.trim().toLowerCase() === 'awards');
@@ -488,6 +543,10 @@ async function walk({ fixture, width, height, keepMine }) {
     const review = await page.evaluate("document.getElementById('main').innerText");
     check(`${tag} · the review names the answers left open`,
           review.includes('These become questions we work out together'), '');
+    check(`${tag} · the review calls "Something else" by the name the client gave it`,
+          review.includes(givenName) && !/\bCustom\b/.test(review), givenName);
+    check(`${tag} · the review says the zone in plain words`,
+          !review.includes('America/'), '');
     await screen(page, `${tag}-review`, width);
     await keyboardWalk(page, tag);
 
@@ -543,9 +602,12 @@ async function walk({ fixture, width, height, keepMine }) {
           brief.includes('Your open questions') &&
           (mineOpen === 0 ? brief.includes('Nothing is waiting on you') : brief.includes(briefDoor.data.open_items[0].question)),
           `${mineOpen} open for the ${me.data.role}`);
-    const place = afterSend.tz.split('/').pop().split('_').join(' ');
-    check(`${tag} · the brief says which clock its times are on`,
-          brief.includes('the clock in ' + place), `${afterSend.tz} reads as "${place}"`);
+    const zoneWords = byId.tz.option_labels[afterSend.tz];
+    check(`${tag} · the brief says which clock its times are on, in the file's words`,
+          !!zoneWords && brief.includes('Every time below is ' + zoneWords) && !brief.includes('America/'),
+          `${afterSend.tz} reads as "${zoneWords}"`);
+    check(`${tag} · the brief lists "Something else" by the name the client gave it`,
+          brief.includes(givenName), givenName);
     check(`${tag} · nothing private reaches the page`,
           !brief.includes('do not show the client') && !JSON.stringify(briefDoor.data).includes('dj_notes'),
           'no private note, no other people\'s numbers');

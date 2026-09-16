@@ -49,6 +49,9 @@ SAFE_WORDS = {
     "PASTE-THE-SCRIPT-ADDRESS-HERE", "Phone", "Printed", "Re-check", "Re-confirm",
     "Ready", "Role", "Room", "Run", "Say", "Segoe", "Sources", "Styles", "Tell",
     "There", "UI", "UTC", "Walk-on",
+    # the plain words for the parts of the night and the zones, and the practice raffle
+    "Guests", "Mingling", "Speeches", "Wrapping", "What", "Raffle", "Ten", "Charity",
+    "Central", "Eastern", "Mountain", "Arizona", "Hawaii", "Somewhere",
 }
 
 # The exact song lines the pretend events carry.  Famous records, pinned.

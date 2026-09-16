@@ -114,8 +114,18 @@
     return String(word).toLowerCase().replace(/[^a-z0-9]+/g, '-');
   }
 
-  function titled(word) {
-    return String(word || '').charAt(0).toUpperCase() + String(word || '').slice(1);
+  function momentQuestion() {
+    var found = null;
+    questions().forEach(function (question) { if (question.type === 'moments') found = question; });
+    return found || {};
+  }
+  // The word for a part of the night is questions.json's, never this file's.
+  function kindLabel(kind) {
+    return (momentQuestion().option_labels || {})[kind] || kind;
+  }
+  // "Something else" is named by the client; every other part keeps the file's word.
+  function momentName(moment) {
+    return moment.kind === 'custom' ? (moment.label || kindLabel('custom')) : kindLabel(moment.kind);
   }
 
   // ------------------------------------------------------- what an answer is
@@ -162,7 +172,7 @@
     var found = null;
     savedMoments().forEach(function (m) { if (m.moment_id === mid) found = m; });
     if (found) return found;
-    return {moment_id: mid, kind: kind, label: titled(kind), date: eventDate(),
+    return {moment_id: mid, kind: kind, label: kind === 'custom' ? '' : kindLabel(kind), date: eventDate(),
             start: '', end: '', duration_min: 0, purpose: '', room: '',
             music_owner: 'dj', cue_owner: 'planner', cue_text: '', pronunciation: '',
             approval: 'draft', active: false};
@@ -791,14 +801,29 @@
       var card = el('div', {class: 'moment'});
       card.appendChild(el('button', {
         type: 'button', class: 'chip', id: 'm_' + kind, 'aria-pressed': on ? 'true' : 'false',
-        text: moment.label || titled(kind),
+        text: kindLabel(kind),
         on: {click: function () { S.lastFocus = 'm_' + kind; setMoment(kind, {active: !on}); paint(); }}
       }));
+      if (on && kind === 'custom') {
+        var naming = question.custom_name || {};
+        var name = el('input', {type: 'text', id: 'm_custom_name', 'aria-describedby': 'h_m_custom_name'});
+        name.value = moment.label || '';
+        name.addEventListener('input', function () {
+          S.lastFocus = 'm_custom_name';
+          setMoment(kind, {label: name.value});
+        });
+        card.appendChild(el('div', {class: 'times'}, [el('div', {}, [
+          el('label', {for: 'm_custom_name', text: naming.label || ''}),
+          name,
+          naming.help ? el('p', {class: 'qhelp', id: 'h_m_custom_name', text: naming.help}) : null
+        ])]));
+      }
       if (on) {
         var times = el('div', {class: 'times'});
-        [['start', 'Starts'], ['end', 'Ends']].forEach(function (pair) {
+        var words = question.time_labels || {};
+        [['start', words.start || ''], ['end', words.end || '']].forEach(function (pair) {
           var field = el('input', {type: 'time', id: 'm_' + kind + '_' + pair[0],
-                                   'aria-label': (moment.label || titled(kind)) + ' ' + pair[1].toLowerCase()});
+                                   'aria-label': momentName(moment) + ' ' + pair[1].toLowerCase()});
           field.value = moment[pair[0]] || '';
           field.addEventListener('input', function () {
             var patch = {}; patch[pair[0]] = field.value; setMoment(kind, patch);
@@ -897,7 +922,7 @@
       (question.options || []).forEach(function (kind) {
         var moment = momentFor(kind);
         if (!moment.active) return;
-        lines.push((moment.label || titled(kind)) + ' — ' + momentClock(moment));
+        lines.push(momentName(moment) + ' — ' + momentClock(moment));
       });
     });
     return lines;
@@ -1034,7 +1059,9 @@
         el('dt', {text: labelOf('venue')}), el('dd', {text: head.venue || '—'})
       ]),
       el('p', {class: 'qhelp', style: 'margin-top:10px',
-               text: 'Every time below is the time on the clock in ' + placeOf(head.tz) + '.'}),
+               text: placeOf(head.tz)
+                 ? 'Every time below is ' + placeOf(head.tz) + '.'
+                 : 'Every time below is on the clock where the event is.'}),
       S.brief.next_action ? el('p', {class: 'note good', text: S.brief.next_action}) : null
     ]));
 
@@ -1049,7 +1076,7 @@
       moments.forEach(function (moment) {
         order.appendChild(el('div', {class: 'ans'}, [
           el('div', {class: 'k tnum', text: momentClock(moment)}),
-          el('div', {class: 'v', text: moment.label || titled(moment.kind)}),
+          el('div', {class: 'v', text: momentName(moment)}),
           moment.purpose ? el('div', {class: 'k', text: moment.purpose}) : null
         ]));
       });
@@ -1136,14 +1163,19 @@
 
   // "America/Los_Angeles" is a file name for a clock; the place is the word.
   function placeOf(zone) {
-    var tail = String(zone || '').split('/').pop();
-    return tail ? tail.split('_').join(' ') : 'your event';
+    // questions.json holds the plain words for a zone; a zone it does not
+    // know gets no words at all rather than a machine's spelling.
+    var words = '';
+    questions().forEach(function (question) {
+      if (question.id === 'tz') words = (question.option_labels || {})[zone] || '';
+    });
+    return words;
   }
 
   function momentLabelOf(mid) {
     var found = '';
     ((S.event || {}).moments || []).forEach(function (m) {
-      if (m.moment_id === mid) found = m.label || titled(m.kind);
+      if (m.moment_id === mid) found = momentName(m);
     });
     return found || mid;
   }
@@ -1189,7 +1221,7 @@
       changed.slice(1).forEach(function (attr) { rest[attr] = proposal[attr]; });
       out.push({field: 'moments.' + moment.moment_id + '.' + changed[0],
                 rest: rest, moment: moment,
-                label: moment.label || titled(moment.kind),
+                label: momentName(moment),
                 mine: changed.map(function (attr) { return momentSide(attr, moment[attr]); }).join('\n'),
                 theirs: changed.map(function (attr) { return momentSide(attr, proposal[attr]); }).join('\n'),
                 by: nameOf(proposal.by), at: proposal.at});

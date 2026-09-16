@@ -204,7 +204,8 @@ describe('Doors', {concurrency: false}, () => {
 
   test('the day sheet prints the revision the zone and the cue words', () => prepared((g, dj, {event}) => {
     const answer = knock(g, `/api/events/${event.event_id}/daysheet`, dj); assert.equal(answer.kind, 'text/html');
-    for (const wanted of [`revision ${event.revision}`, 'America/Chicago', 'shi-VAWN', 'please welcome your host for the evening']) assert.ok(answer.text.includes(wanted), wanted);
+    for (const wanted of [`revision ${event.revision}`, 'Central time (Chicago)', 'Raffle', 'shi-VAWN', 'please welcome your host for the evening']) assert.ok(answer.text.includes(wanted), wanted);
+    assert.ok(!answer.text.includes('America/'), 'the sheet never shows a zone as a file name');
   }));
 
   test('a client cannot pull the day sheet', () => prepared((g, dj, {event, tokens}) => {
@@ -221,6 +222,12 @@ describe('Doors', {concurrency: false}, () => {
   test('a cell that would run as a formula leaves behind a quote', () => prepared((g, dj, {event, tokens}) => {
     knock(g, `/api/events/${event.event_id}/save`, tokens.planner, {base_revision: event.revision, submission_id: 'sub_csv', moments: [{moment_id: 'm_dinner', cue_text: '=1+1 then hit play'}]});
     const csv = knock(g, `/api/events/${event.event_id}/daysheet.csv`, dj).text; assert.ok(csv.includes("'=1+1 then hit play")); assert.ok(!csv.includes(',=1+1'));
+  }));
+
+  test('the brief carries the name the client gave a part of the night', () => prepared((g, dj, {event, tokens}) => {
+    const answer = knock(g, `/api/events/${event.event_id}/brief`, tokens.approver);
+    const named = answer.moments.find((moment) => moment.kind === 'custom');
+    assert.equal(named && named.label, 'Raffle');
   }));
 
   test('the brief only carries the questions this person owns', () => prepared((g, dj, {event, tokens}) => {

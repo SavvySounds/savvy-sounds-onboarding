@@ -59,7 +59,8 @@ NEEDLES = [
     needle("script/doors.gs", "    if (taken[role]) {", "    if (false) {", "doors.test.mjs — two people cannot share one role and lose a link", "two people on one role, and one of the two links is lost silently"),
     needle("script/doors.gs", '    return who.role === "dj" ? set_seen(body.event_id, body.revision) :', '    return true ? set_seen(body.event_id, body.revision) :', "doors.test.mjs — only Miles says what Miles has read", "a client can say what Miles has read and hide their own changes"),
 
-    # daysheet.gs: 1 guard
+    # daysheet.gs: 2 guards
+    needle("script/daysheet.gs", '  return (question.option_labels || {})[tz] || String(tz || "").split("/").pop().replace(/_/g, " ") + " time";', '  return String(tz || "");', "doors.test.mjs — the day sheet prints the revision the zone and the cue words", "the day sheet shows the zone as a file name again"),
     needle("script/daysheet.gs", '  return FORMULA_STARTS.indexOf(text.slice(0, 1)) !== -1 ? "\'" + text : text;', "  return text;", "doors.test.mjs — a cell that would run as a formula leaves behind a quote", "a pasted formula runs when the sheet is opened"),
 ]
 
