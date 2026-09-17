@@ -601,6 +601,21 @@ yet" and refuse to pretend.
 Expect in your Drive afterwards: one folder **Savvy Sounds - corporate prep**
 holding `access.json`; each booking adds `ev_….json` and `ev_….changes.jsonl`.
 
+### 1b. Change your pass (any time)
+
+Your pass is whatever you set it to: eight characters or more, no spaces. It
+is changed through the door, with the pass you hold now:
+
+    curl -s -L -H 'Content-Type: text/plain;charset=utf-8' \
+      -d '{"door":"/api/dj/pass","token":"<your current pass>","body":{"pass":"<the new one>"}}' \
+      https://script.google.com/macros/s/.../exec
+
+Expect `{"status":200,"ok":true}`; the old pass answers `link-expired` from
+that second on, and every client link is untouched. Set for the first time on
+2026-09-16 (deployment version 2, "Own pass for Miles", same address). A
+change to the script needs Deploy → Manage deployments → pencil → Version:
+New version → Deploy; the address does not change.
+
 ### 2. Put the pages on the address (about five minutes, after step 1)
 
 **Order matters, learned the hard way 2026-09-16:** the DNS record goes in
