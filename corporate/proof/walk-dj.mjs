@@ -465,6 +465,7 @@ async function main() {
     await page.shot('phone-after-settling');
 
     await linkControlChecks(page, base, doors, northstar.event_id);
+    await momentWordChecks(page, base, doors, northstar.event_id);
     await bookingZoneChecks(page, base, doors);
     await biggerTextChecks(page, base, northstar.event_id);
     await stillWithReducedMotion(page);
@@ -880,6 +881,40 @@ async function ownItemChecks(page, eventId, doors) {
   mark(String(item.answer || '').startsWith('Something slow'), 'and what he wrote is what was kept');
   const stillThere = await page.read(`document.body.textContent.includes(${JSON.stringify(mine.question.slice(0, 30))})`);
   mark(!stillThere, 'and it is off the screen');
+}
+
+async function momentWordChecks(page, base, doors, eventId) {
+  // Theo (the one who says yes) adds a part of the night he has not named yet.
+  // The running order is Jules's, so it lands on Miles's page as Theo's ask,
+  // one row per attribute — and every word of those rows has to be the form's, not
+  // the store's: no "m_custom", no "custom", no "dj", no "draft", no "true".
+  const theo = (await doors(`/api/events/${eventId}`)).people.find((p) => p.person_id === 'p_theo');
+  const theoToken = (await doors('/api/dj/access', { body: { event_id: eventId, person_id: 'p_theo', role: theo.role } })).token;
+  const event = await doors(`/api/events/${eventId}`);
+  const saved = await (await fetch(`http://127.0.0.1:${Number(new URL(base).port) + 3}/macros/s/local/exec`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+    body: JSON.stringify({ door: `/api/events/${eventId}/save`, token: theoToken,
+      body: { base_revision: event.revision, submission_id: 'sub_words_' + Date.now(), answers: {},
+        moments: [{ moment_id: 'm_custom_walk', kind: 'custom', label: '', active: true,
+          music_owner: 'dj', cue_owner: 'planner', approval: 'draft' }] } })
+  })).json();
+  mark(saved.status === 200, `Theo can add an unnamed part of the night from his side (${saved.status})`);
+  // The page is already on this event, and a hash that does not change is not
+  // a visit: leave for the overview first, then come back and read it fresh.
+  await page.goto(`${base}/corporate/dj/#/`);
+  await page.waitFor('document.querySelectorAll("section.block").length > 1', 'the overview');
+  await page.goto(`${base}/corporate/dj/#/e/${eventId}`);
+  const needsHas = (word) => `(Array.from(document.querySelectorAll('section.block'))
+    .find((b) => (b.querySelector('h2') || {}).textContent === 'Needs you') || {textContent: ''}).textContent.includes(${JSON.stringify(word)})`;
+  await page.waitFor(needsHas('Theo'), 'Theo\'s ask to reach his page');
+  const needs = await page.read(`Array.from(document.querySelectorAll('section.block'))
+    .find((b) => (b.querySelector('h2') || {}).textContent === 'Needs you').textContent`);
+  mark(!/\bm_[a-z_]+/.test(needs), 'no line on his page names a part of the night by its file id');
+  mark(needs.includes('a new part of the night — what it is') || needs.includes('Something else — what it is'),
+    'the unnamed part is called "a new part of the night" (or "Something else" once it is on the order), never by id');
+  mark(!/→ custom\b/.test(needs) && !/→ dj\b/.test(needs) && !/→ draft\b/.test(needs) && !/→ true\b/.test(needs),
+    'and its values are words, not the store\'s ("custom", "dj", "draft", "true")');
 }
 
 async function linkControlChecks(page, base, doors, eventId) {

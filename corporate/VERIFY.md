@@ -400,7 +400,7 @@ prints one line per reading with the number it measured. Nothing pops up,
 nothing makes a sound, and it kills its own server and its own Chrome before it
 prints the last line.
 
-Expect the last line to read **115 of 115 readings passed**, and pictures of
+Expect the last line to read **119 of 119 readings passed**, and pictures of
 the real screen in `corporate/proof/frames/` (not committed).
 
 What it measures, and what it read on 2026-09-14 (the last four rows added
@@ -430,6 +430,7 @@ What it measures, and what it read on 2026-09-14 (the last four rows added
 | the part the client named | "Raffle" on his running order and on the day sheet, never "Custom" or a made-up phrase |
 | the zone picker on "Start a booking" | the form's six zones, each in the form's words, and "Somewhere else" left off |
 | the link controls under "Who is on it" | "New link for Theo" prints a full address under this page's folder and it opens; "Take back Theo's links" says "Taken back: 2 links…", both of his stop opening, Jules's still does |
+| a part of the night a client asked for but never named | on "Needs you" it is "a new part of the night — what it is: → Something else", never `m_custom`; its values are the form's words ("Something else", "you", "not settled", "on"), never the store's (`custom`, `dj`, `draft`, `true`) |
 
 **This walk is in `corporate/run-all.sh` twice over:** once inside
 `corporate/proof/walk.mjs` against the shared stand-in on 8794, and once on
@@ -443,7 +444,8 @@ undo it with git — that eats work nobody meant to lose.
     cp corporate/dj/dj.js /tmp/dj-kept.js
     # take out the words "finishes the next day"; change one line of the
     # owner table (music_owner) ; add an innerHTML somewhere
-    node corporate/proof/walk-dj.mjs        # expect RED, three named readings
+    # take out the plain-words fallback in fieldWords (put `bits[1]` back)
+    node corporate/proof/walk-dj.mjs        # expect RED, four named readings
     cp /tmp/dj-kept.js corporate/dj/dj.js
     node corporate/proof/walk-dj.mjs        # expect green again
 
@@ -452,6 +454,14 @@ and each line said what to repair. A fourth (a 700px minimum width in the
 stylesheet) turned the sideways-scroll reading red at 390 and named the three
 things hanging over the edge; a fifth (a Copy button that says "Copied" when
 the clipboard refused) turned the honesty reading red.
+
+Watched again on 2026-09-17, with the plain-words fallback taken out of
+`fieldWords`/`fieldValue`: the two new readings went red (117 of 119) and
+nothing else did; with it back, 119 of 119. The first cut of that reading
+waited on words that never appear (a hash that does not change is not a
+visit, so the page has to leave for the overview and come back before it is
+read) — it went red for the wrong reason on both runs until the wait was
+pointed at the "Needs you" block itself.
 
 Watched on 2026-09-16: `zoneWords` returning the raw zone and the running
 order drawing `kindWords(moment.kind)` instead of the moment's own label —

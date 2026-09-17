@@ -268,7 +268,19 @@
 
   function fieldValue(field, value) {
     if (value === null || value === undefined) return '';
-    return /\.(start|end)$/.test(String(field || '')) ? clock(value) : asWords(value);
+    field = String(field || '');
+    if (/\.(start|end)$/.test(field)) return clock(value);
+    // The store's own words for a part of the night are not his: "custom" is
+    // "Something else", "dj" is him, "proposed" is "proposed" but "draft" is
+    // "not settled", and on/off is on or off.
+    if (field.indexOf('moments.') === 0) {
+      var attr = field.split('.')[2];
+      if (attr === 'kind') return kindWords(value);
+      if (attr === 'music_owner' || attr === 'cue_owner') return ROLE_WORDS[value] || asWords(value);
+      if (attr === 'approval') return APPROVAL_WORDS[value] || asWords(value);
+      if (attr === 'active') return value ? 'on' : 'off';
+    }
+    return asWords(value);
   }
 
   function changeWords(line, event) {
@@ -393,7 +405,10 @@
     if (field.indexOf('moments.') === 0) {
       var bits = field.split('.');
       var moment = momentById(event, bits[1]);
-      var label = moment ? (moment.label || bits[1]) : bits[1];
+      // A part of the night with no name yet is called what the form calls its
+      // kind ("Something else"), never by the id the store files it under.
+      // One asked for but not yet on the running order is "a new part of the night".
+      var label = moment ? (moment.label || kindWords(moment.kind)) : 'a new part of the night';
       var attr = { start: 'start time', end: 'finish time', date: 'date',
                    cue_text: 'cue words', pronunciation: 'how to say it',
                    duration_min: 'how long it runs', room: 'room',
