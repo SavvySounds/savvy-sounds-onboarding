@@ -80,6 +80,21 @@
     });
   }
 
+  // The first knock of a visit can meet Google half-asleep: a slow answer, or a
+  // page that is not the JSON we asked for. Found live 2026-09-16 on the first
+  // real client's link — the page said "Not connected" until "Try again". So
+  // the opening knocks are patient: three tries, a breath apart, before the
+  // page says it cannot reach us.
+  var PATIENCE = {tries: 3, pause_ms: 1500};
+  function knock(method, path, body, tries) {
+    tries = tries === undefined ? PATIENCE.tries : tries;
+    return door(method, path, body).catch(function (problem) {
+      if (tries <= 1) throw problem;
+      return new Promise(function (again) { setTimeout(again, PATIENCE.pause_ms); })
+        .then(function () { return knock(method, path, body, tries - 1); });
+    });
+  }
+
   // ------------------------------------------------------------ small hands
   function el(tag, props, kids) {
     var node = document.createElement(tag);
@@ -1464,14 +1479,14 @@
     var booting = document.getElementById('booting');
     if (booting) booting.textContent = 'Opening your event…';
     if (!S.token) return blocked('link-expired');
-    door('GET', '/api/me').then(function (reply) {
+    knock('GET', '/api/me').then(function (reply) {
       if (reply.status !== 200 || !reply.data || !reply.data.ok) {
         return blocked(reply.data && reply.data.error);
       }
       S.me = reply.data;
       if (!S.me.event_id) return blocked('not-your-event');
-      return Promise.all([door('GET', '/api/questions'),
-                          door('GET', '/api/events/' + S.me.event_id)])
+      return Promise.all([knock('GET', '/api/questions'),
+                          knock('GET', '/api/events/' + S.me.event_id)])
         .then(function (both) {
           if (both[0].status !== 200 || both[1].status !== 200) {
             return blocked(both[1].data && both[1].data.error);

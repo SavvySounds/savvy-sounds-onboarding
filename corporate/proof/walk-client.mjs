@@ -376,6 +376,29 @@ async function walk({ fixture, width, height, keepMine }) {
     }
 
     page = await launch({ width, height, scratch: process.env.CORP_WALK_SCRATCH || undefined });
+
+    // ---- a half-asleep home: the first two knocks of a visit fail -----------
+    // Google's first answer to a cold script can be slow or not JSON at all
+    // (seen live 2026-09-16 on the first real client's link). The page must
+    // keep knocking a breath apart and arrive, not say "Not connected".
+    const planted = await page.send('Page.addScriptToEvaluateOnNewDocument', { source: `
+      (() => {
+        let failures = 0;
+        const real = window.fetch.bind(window);
+        window.fetch = (url, options) => {
+          if (String(url) === String(window.PREP_HOME) && failures < 2) { failures += 1; return Promise.reject(new TypeError('half asleep')); }
+          return real(url, options);
+        };
+        window.__sleepyKnocks = () => failures;
+      })();` });
+    await page.open(`${base}/corporate/client/#${approver.token}`);
+    await page.waitFor("document.querySelector('.view') && !document.getElementById('booting')", { seconds: 20, what: 'the first screen through a sleepy home' });
+    const sleepy = await page.evaluate("({ text: document.getElementById('main').innerText.slice(0, 80), failed: window.__sleepyKnocks() })");
+    check(`${tag} · two failed knocks at the door and the page still arrives`,
+          sleepy.failed === 2 && !/NOT CONNECTED|Not connected/.test(sleepy.text) && /set the tone/i.test(sleepy.text),
+          `${sleepy.failed} knocks failed first; screen says "${sleepy.text.split('\n')[0]}"`);
+    await page.send('Page.removeScriptToEvaluateOnNewDocument', { identifier: planted.identifier });
+
     const world = await page.open(`${base}/corporate/client/#${approver.token}`);
     check(`${tag} · the private link opens on a settled ${width}-wide screen`,
           world.vis === 'visible' && world.w === width, `${world.w}x${world.h}, ${world.vis}`);
