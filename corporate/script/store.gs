@@ -561,6 +561,28 @@ function access(op, kw) {
   throw new Error("no such access operation: " + JSON.stringify(op));
 }
 
+function remove_event(event_id) {
+  // One booking to the Drive trash (its record and its history), every link
+  // on it closed. Drive keeps trashed files for thirty days, so a slip can be
+  // put back by hand; nothing here is silent.
+  var name = _safe(event_id);
+  var lock = _lock_for(event_id); lock.waitLock(30000);
+  try {
+    var record = _file_named(name);
+    if (!record) return {ok: false, error: "not-found"};
+    var history = _file_named(_changes_path(event_id));
+    var book = _load_access(), closed = 0;
+    Object.keys(book.tokens || {}).forEach(function (held) {
+      var g = book.tokens[held];
+      if (g.event_id === event_id && !g.revoked_at) { g.revoked_at = now(); closed += 1; }
+    });
+    if (closed) _write_json(_access_path(), book);
+    record.setTrashed(true);
+    if (history) history.setTrashed(true);
+    return {ok: true, event_id: event_id, links_closed: closed};
+  } finally { lock.releaseLock(); }
+}
+
 function wipe() {
   var lock = _lock_for("wipe"); lock.waitLock(30000);
   try {

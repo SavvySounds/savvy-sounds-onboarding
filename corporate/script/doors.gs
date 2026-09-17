@@ -149,6 +149,12 @@ function route(door, who, body) {
     return who.role === "dj" ? set_seen(body.event_id, body.revision) :
       [403, {ok: false, error: "not-allowed"}];
   }
+  if (door === "/api/dj/remove") {
+    if (who.role !== "dj") return [403, {ok: false, error: "not-allowed"}];
+    if (!STORE_EVENT_ID.test(String(body.event_id || ""))) return [422, {ok: false, error: "invalid"}];
+    var gone = remove_event(body.event_id);
+    return gone.ok ? [200, gone] : [404, gone];
+  }
   if (door === "/api/dj/pass") {
     if (who.role !== "dj") return [403, {ok: false, error: "not-allowed"}];
     var changed = access("set_pass", {pass: body.pass});

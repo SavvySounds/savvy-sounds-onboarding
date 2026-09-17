@@ -235,6 +235,17 @@ describe('Doors', {concurrency: false}, () => {
     assert.equal(knock(g, '/api/me', tokens.approver).status, 200, 'client links are untouched');
   }));
 
+  test('Miles can remove a booking: its files go to the trash and its links close', () => prepared((g, dj, {event, tokens}) => {
+    assert.equal(knock(g, '/api/dj/remove', tokens.approver, {event_id: event.event_id}).status, 403);
+    assert.equal(knock(g, '/api/dj/remove', dj, {event_id: '../x'}).status, 422);
+    assert.equal(knock(g, '/api/dj/remove', dj, {event_id: 'ev_0000000000'}).status, 404);
+    const gone = knock(g, '/api/dj/remove', dj, {event_id: event.event_id});
+    assert.equal(gone.status, 200); assert.ok(gone.links_closed >= 4, `links closed: ${gone.links_closed}`);
+    assert.equal(knock(g, '/api/me', tokens.approver).status, 403, 'the client link is closed');
+    assert.equal(knock(g, '/api/events', dj).events.length, 0, 'the list no longer holds it');
+    assert.equal(knock(g, '/api/dj/remove', dj, {event_id: event.event_id}).status, 404, 'gone is gone');
+  }));
+
   test('a client cannot pull the day sheet', () => prepared((g, dj, {event, tokens}) => {
     const answer = knock(g, `/api/events/${event.event_id}/daysheet`, tokens.approver); assert.equal(answer.status, 403); assert.equal(answer.error, 'not-allowed');
   }));
