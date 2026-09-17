@@ -149,6 +149,11 @@ function route(door, who, body) {
     return who.role === "dj" ? set_seen(body.event_id, body.revision) :
       [403, {ok: false, error: "not-allowed"}];
   }
+  if (door === "/api/dj/pass") {
+    if (who.role !== "dj") return [403, {ok: false, error: "not-allowed"}];
+    var changed = access("set_pass", {pass: body.pass});
+    return changed.ok ? [200, changed] : [422, {ok: false, error: "invalid", errors: [{field: "pass", message: "A pass is at least eight characters with no spaces."}]}];
+  }
   if (door === "/api/dj/access") {
     if (who.role !== "dj") return [403, {ok: false, error: "not-allowed"}];
     if (body.revoke) return [200, access("revoke", {token: body.revoke})];

@@ -223,6 +223,18 @@ describe('Doors', {concurrency: false}, () => {
     assert.equal(knock(g, '/api/dj/access', dj, {revoke_person: {event_id: '../x', person_id: 'p_theo'}}).status, 422);
   }));
 
+  test('Miles can change his pass to his own words, and only Miles', () => prepared((g, dj, {tokens}) => {
+    assert.equal(knock(g, '/api/dj/pass', tokens.approver, {pass: 'Saturnring99'}).status, 403);
+    assert.equal(knock(g, '/api/dj/pass', dj, {pass: 'short'}).status, 422);
+    assert.equal(knock(g, '/api/dj/pass', dj, {pass: 'has a space'}).status, 422);
+    assert.equal(knock(g, '/api/me', dj).status, 200, 'a refused change leaves the old pass working');
+    assert.equal(knock(g, '/api/dj/pass', dj, {pass: 'Saturnring99'}).status, 200);
+    assert.equal(knock(g, '/api/me', dj).status, 403, 'the old pass is dead');
+    assert.equal(knock(g, '/api/me', 'Saturnring99').status, 200, 'the new one opens his page');
+    assert.equal(knock(g, '/api/events', 'Saturnring99').status, 200);
+    assert.equal(knock(g, '/api/me', tokens.approver).status, 200, 'client links are untouched');
+  }));
+
   test('a client cannot pull the day sheet', () => prepared((g, dj, {event, tokens}) => {
     const answer = knock(g, `/api/events/${event.event_id}/daysheet`, tokens.approver); assert.equal(answer.status, 403); assert.equal(answer.error, 'not-allowed');
   }));

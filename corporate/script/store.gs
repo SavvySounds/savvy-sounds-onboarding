@@ -508,9 +508,11 @@ function access(op, kw) {
   kw = kw || {};
   if (op === "lookup") {
     var token = String(kw.token || "");
-    if (!STORE_TOKEN.test(token)) return {ok: false, error: "link-expired"};
     var book = _load_access();
-    if (token === book.dj_token) return {ok: true, event_id: null, person_id: "p_miles", role: "dj", expires_at: null};
+    // Miles's own pass is whatever he set it to (set_pass), so it is matched
+    // whole before the client links, which are always 32 hex characters.
+    if (book.dj_token && token === book.dj_token) return {ok: true, event_id: null, person_id: "p_miles", role: "dj", expires_at: null};
+    if (!STORE_TOKEN.test(token)) return {ok: false, error: "link-expired"};
     var grant = (book.tokens || {})[token];
     if (!grant || grant.revoked_at || (grant.expires_at && grant.expires_at <= now())) return {ok: false, error: "link-expired"};
     return {ok: true, event_id: grant.event_id, person_id: grant.person_id,
@@ -541,6 +543,14 @@ function access(op, kw) {
       });
       if (taken) _write_json(_access_path(), book);
       return {ok: true, taken: taken};
+    }
+    if (op === "set_pass") {
+      // His pass, in his own words. Eight characters at least, no spaces; the
+      // old one stops working the moment the new one is written.
+      var wanted = String(kw.pass || "");
+      if (wanted.length < 8 || /\s/.test(wanted)) return {ok: false, error: "invalid"};
+      book.dj_token = wanted; _write_json(_access_path(), book);
+      return {ok: true};
     }
     if (op === "dj") {
       if (!book.dj_token) { book.dj_token = Utilities.getUuid().replace(/-/g, ""); _write_json(_access_path(), book); }
