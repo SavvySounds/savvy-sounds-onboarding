@@ -622,7 +622,7 @@
     }));
 
     var people = [
-      { key: 'approver', label: 'Who says yes', hint: 'the one who signs it off — needed' },
+      { key: 'approver', label: 'Who says yes', hint: 'the one who signs it off — required' },
       { key: 'planner', label: 'The planner', hint: 'runs the room on the night — if there is one' },
       { key: 'production', label: 'The venue side', hint: 'sound, power, load-in — if there is one' },
       { key: 'contact', label: 'The day-of contact', hint: 'who you call on the night — if there is one' }

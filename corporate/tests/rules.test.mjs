@@ -4,7 +4,8 @@ import {describe, test} from 'node:test';
 import {load} from '../script/load.mjs';
 
 const CORPORATE = new URL('../', import.meta.url);
-const QUESTIONS = JSON.parse(readFileSync(new URL('questions.json', CORPORATE), 'utf8')).questions;
+const QUESTIONS_FILE = JSON.parse(readFileSync(new URL('questions.json', CORPORATE), 'utf8'));
+const QUESTIONS = QUESTIONS_FILE.questions;
 const rules = load();
 const plain = (value) => JSON.parse(JSON.stringify(value));
 
@@ -66,6 +67,7 @@ describe('Question labels', () => {
     }
     assert.ok(questions.moments.time_labels.start && questions.moments.time_labels.end, 'the Starts and Ends words');
     assert.ok(questions.moments.custom_name.label, 'the words asking the client to name "Something else"');
+    assert.equal(QUESTIONS_FILE.required_label, 'required', 'the tag on a required question');
   });
 });
 

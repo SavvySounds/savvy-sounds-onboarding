@@ -3,6 +3,7 @@
   "title": "Let's set the tone for your event.",
   "opening": "Tell us about your guests, the atmosphere you want, and any moments that need a soundtrack. Rough answers are welcome — we'll work out the details together.",
   "states": ["blank", "none", "unknown", "miles", "confirmed"],
+  "required_label": "required",
   "state_labels": {
     "blank": "Not answered",
     "none": "There are none",

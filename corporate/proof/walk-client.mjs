@@ -473,6 +473,11 @@ async function walk({ fixture, width, height, keepMine }) {
     check(`${tag} · no zone on the form reads like a file name`,
           zoneChips.length > 0 && zoneChips.every((words) => !/[/_]/.test(words)), zoneChips.join(' | '));
 
+    // ---- the tag on a required question is the file's word, not the page's ----
+    const tags = await page.evaluate("[...new Set([...document.querySelectorAll('.req')].map(n => n.textContent.trim()))]");
+    check(`${tag} · the tag on a required question is the file's word`,
+          tags.length === 1 && tags[0] === form.required_label && form.required_label === 'required', JSON.stringify(tags));
+
     // ---- every part of the night wears the file's words -------------------
     await gotoSection(page, 4);                        // The moments
     const partChips = await page.evaluate("[...document.querySelectorAll('#f_moments > .moment > .chip')].map(b => b.textContent.trim())");

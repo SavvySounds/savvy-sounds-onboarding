@@ -614,7 +614,7 @@
                question.type === 'songs' || question.type === 'links' || question.type === 'moments'
       ? el('p', {class: 'qlabel', id: 'l_' + question.id, text: labelText})
       : el('label', {class: 'qlabel', for: 'f_' + question.id, text: labelText});
-    if (question.required_to_submit) head.appendChild(el('span', {class: 'req', text: 'needed'}));
+    if (question.required_to_submit) head.appendChild(el('span', {class: 'req', text: S.form.required_label || ''}));
     block.appendChild(head);
     if (question.help) block.appendChild(el('p', {class: 'qhelp', text: question.help}));
     var box = control(question, answer);
