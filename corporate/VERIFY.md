@@ -616,6 +616,18 @@ that second on, and every client link is untouched. Set for the first time on
 change to the script needs Deploy → Manage deployments → pencil → Version:
 New version → Deploy; the address does not change.
 
+### 1c. Remove a booking (Miles only, by the door)
+
+    curl -s -L -H 'Content-Type: text/plain;charset=utf-8' \
+      -d '{"door":"/api/dj/remove","token":"<your pass>","body":{"event_id":"ev_..."}}' \
+      https://script.google.com/macros/s/.../exec
+
+The record and its history go to the Drive trash (thirty days to put them
+back by hand), every link on the event closes, and the answer says how many.
+Used 2026-09-16 to clear the practice booking the first live walk made
+(deployment version 3). There is no button for it on his page on purpose: a
+real booking should not be one tap from the trash.
+
 ### 2. Put the pages on the address (about five minutes, after step 1)
 
 **Order matters, learned the hard way 2026-09-16:** the DNS record goes in
