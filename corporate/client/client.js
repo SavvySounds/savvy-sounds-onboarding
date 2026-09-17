@@ -1373,12 +1373,12 @@
       block.appendChild(el('h3', {text: clash.label}));
       var yours = el('div', {class: 'side'}, [
         el('div', {class: 'k', text: 'Yours'}),
-        el('div', {class: 'v', text: plain(clash.yours)})
+        el('div', {class: 'v', text: plain(clash.yours, clash.field)})
       ]);
       var theirs = el('div', {class: 'side'}, [
         el('div', {class: 'k', text: (clash.theirs_by || 'They') + ' changed it' +
                                      (clash.theirs_at ? ' at ' + clockOf(clash.theirs_at) : '')}),
-        el('div', {class: 'v', text: plain(clash.theirs)})
+        el('div', {class: 'v', text: plain(clash.theirs, clash.field)})
       ]);
       block.appendChild(el('div', {class: 'sides'}, [yours, theirs]));
       var mineBtn = el('button', {type: 'button', class: 'chip', 'aria-pressed': 'true', text: 'Keep mine'});
@@ -1404,13 +1404,15 @@
     return box;
   }
 
-  function plain(value) {
+  function plain(value, field) {
     if (value === null || value === undefined || value === '') return '—';
     if (Array.isArray(value)) return value.join(', ');
     if (typeof value === 'object') {
       if (value.state && value.state !== 'confirmed') return stateLabel(value.state);
-      return plain(value.value);
+      return plain(value.value, field);
     }
+    // A time on this screen is a time like any other on this page: 8:00 PM.
+    if (/\.(start|end)$/.test(String(field || ''))) return clock(value);
     return String(value);
   }
 

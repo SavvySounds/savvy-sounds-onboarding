@@ -108,6 +108,64 @@ describe('Doors', {concurrency: false}, () => {
     assert.equal(clash.status, 409); assert.equal(clash.conflicts[0].yours, '21:00'); assert.equal(clash.conflicts[0].theirs, '20:45'); assert.equal(clash.conflicts[0].theirs_by, 'Jules Okafor');
   }));
 
+  test('nobody is asked to settle an answer against themselves', () => prepared((g, dj, {event, tokens}) => {
+    // Two saves from one screen, both built on the same revision: the second
+    // is that person's later keystroke, not a second person's answer.
+    const first = knock(g, `/api/events/${event.event_id}/save`, tokens.planner, {base_revision: event.revision, submission_id: 'sub_self_1', moments: [{moment_id: 'm_awards', start: '20:45'}]});
+    assert.equal(first.status, 200);
+    const again = knock(g, `/api/events/${event.event_id}/save`, tokens.planner, {base_revision: event.revision, submission_id: 'sub_self_2', moments: [{moment_id: 'm_awards', start: '21:15'}]});
+    assert.equal(again.status, 200);
+    assert.equal(knock(g, `/api/events/${event.event_id}`, dj).moments.find((m) => m.moment_id === 'm_awards').start, '21:15');
+  }));
+
+  test('two answers to settle are named in words, never as a file name', () => prepared((g, dj, {event, tokens}) => {
+    knock(g, `/api/events/${event.event_id}/save`, tokens.planner, {base_revision: event.revision, submission_id: 'sub_words_p', moments: [{moment_id: 'm_awards', end: '21:30'}]});
+    const clash = knock(g, `/api/events/${event.event_id}/save`, dj, {base_revision: event.revision, submission_id: 'sub_words_d', moments: [{moment_id: 'm_awards', end: '22:00'}]});
+    assert.equal(clash.status, 409);
+    assert.equal(clash.conflicts[0].label, 'Awards — finish time');
+    assert.ok(!/moments\.|m_awards/.test(clash.conflicts[0].label));
+  }));
+
+  test('a part of the night with no name of its own is still named in words', () => prepared((g, dj, {event, tokens}) => {
+    knock(g, `/api/events/${event.event_id}/save`, dj, {base_revision: event.revision, submission_id: 'sub_fresh', moments: [{moment_id: 'm_custom2', kind: 'custom', active: true, start: '19:00', end: '19:30'}]});
+    const now = knock(g, `/api/events/${event.event_id}`, dj);
+    knock(g, `/api/events/${event.event_id}/save`, tokens.planner, {base_revision: now.revision, submission_id: 'sub_fresh_p', moments: [{moment_id: 'm_custom2', end: '19:45'}]});
+    const clash = knock(g, `/api/events/${event.event_id}/save`, dj, {base_revision: now.revision, submission_id: 'sub_fresh_d', moments: [{moment_id: 'm_custom2', end: '20:15'}]});
+    assert.equal(clash.status, 409);
+    assert.equal(clash.conflicts[0].label, 'Something else — finish time');
+  }));
+
+  test('a time written down for the first time asks nobody to re-confirm it', () => prepared((g, dj, {event}) => {
+    const answer = knock(g, `/api/events/${event.event_id}/save`, dj, {base_revision: event.revision, submission_id: 'sub_firsttime',
+      moments: [{moment_id: 'm_newpart', kind: 'custom', label: 'Raffle draw', active: true, start: '19:00', end: '19:20'}]});
+    assert.equal(answer.status, 200);
+    const raised = answer.effects.open_items_added.filter((id) => /recheck/.test(id));
+    assert.deepEqual(raised, []);
+  }));
+
+  test('times that move ask the venue side once, not once per part', () => prepared((g, dj, {event}) => {
+    const answer = knock(g, `/api/events/${event.event_id}/save`, dj, {base_revision: event.revision, submission_id: 'sub_moved',
+      moments: [{moment_id: 'm_awards', start: '20:30', end: '21:30'}, {moment_id: 'm_dancing', start: '22:00', end: '01:00'}]});
+    assert.equal(answer.status, 200);
+    const sound = answer.effects.open_items_added.filter((id) => id.indexOf('soundcheck') >= 0);
+    assert.deepEqual(sound, ['oi_soundcheck_recheck']);
+    const cues = answer.effects.open_items_added.filter((id) => id.indexOf('cue_recheck') >= 0);
+    assert.equal(cues.length, 2);
+    const items = knock(g, `/api/events/${event.event_id}`, dj).open_items.filter((item) => item.item_id === 'oi_soundcheck_recheck');
+    assert.equal(items.length, 1);
+    assert.deepEqual(items[0].moments.sort(), ['m_awards', 'm_dancing']);
+  }));
+
+  test('the day sheet names an unnamed part of the night in words', () => prepared((g, dj, {event}) => {
+    knock(g, `/api/events/${event.event_id}/save`, dj, {base_revision: event.revision, submission_id: 'sub_sheet',
+      moments: [{moment_id: 'm_unnamed', kind: 'custom', active: true, date: '2026-11-06', start: '19:00', end: '19:30'}]});
+    const sheet = knock(g, `/api/events/${event.event_id}/daysheet`, dj);
+    assert.equal(sheet.status, 200);
+    assert.ok(sheet.text.indexOf('Something else') >= 0, 'the sheet says what the form calls it');
+    assert.ok(!/m_unnamed/.test(sheet.text), 'and never its file id');
+    assert.ok(!/>custom</.test(sheet.text), 'and never the store\'s key');
+  }));
+
   test('a contributor can only propose', () => prepared((g, dj, {event, tokens}) => {
     const answer = knock(g, `/api/events/${event.event_id}/save`, tokens.contact, {base_revision: event.revision, submission_id: 'sub_c', moments: [{moment_id: 'm_awards', start: '22:00'}]});
     assert.deepEqual(answer.proposed, ['moments.m_awards.start']);

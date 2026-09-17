@@ -282,9 +282,34 @@ describe('Effects', () => {
     const result = plain(rules.effects(before, after, QUESTIONS));
     assert.deepEqual(result.cues_to_recheck, ['m_awards']);
     assert.deepEqual(result.open_items_added.map((i) => i.item_id).sort(),
-      ['oi_cue_recheck_m_awards', 'oi_soundcheck_recheck_m_awards']);
+      ['oi_cue_recheck_m_awards', 'oi_soundcheck_recheck']);
     const owners = Object.fromEntries(result.open_items_added.map((i) => [i.item_id, i.owner]));
-    assert.equal(owners.oi_soundcheck_recheck_m_awards, 'approver');
+    assert.equal(owners.oi_soundcheck_recheck, 'approver');
+    // One soundcheck question for the event, naming every part that moved.
+    const sound = result.open_items_added.find((i) => i.item_id === 'oi_soundcheck_recheck');
+    assert.deepEqual(sound.moments, ['m_awards']);
+  });
+
+  test('a time written down for the first time has not moved', () => {
+    // No old start or end: there was no clock for anybody to have planned
+    // around, so nothing is sent back to be re-confirmed.
+    const before = event([moment('m_custom', 'custom', '2026-11-06', null, null)], {}, [APPROVER, PLANNER]);
+    const after = structuredClone(before);
+    after.moments[0].start = '19:00';
+    after.moments[0].end = '19:30';
+    const result = plain(rules.effects(before, after, QUESTIONS));
+    assert.deepEqual(result.open_items_added.filter((i) => /recheck/.test(i.item_id)), []);
+  });
+
+  test("an unnamed part of the night is named in the form's words", () => {
+    // No label at all: the store stopped writing the file id into the name.
+    const before = event([moment('m_custom', 'custom', '2026-11-06', '19:00', '19:30', {label: ''})], {}, [APPROVER, PLANNER]);
+    const after = structuredClone(before);
+    after.moments[0].start = '19:15';
+    const result = plain(rules.effects(before, after, QUESTIONS));
+    const cue = result.open_items_added.find((i) => i.item_id === 'oi_cue_recheck_m_custom');
+    assert.ok(cue.question.indexOf('Something else') >= 0, cue.question);
+    assert.ok(!/m_custom/.test(cue.question), cue.question);
   });
 
   test('a time change with no cue words anywhere flags no cues', () => {

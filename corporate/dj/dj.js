@@ -39,6 +39,17 @@
     music_owner: 'prep'
   };
 
+  // What each attribute of a moment is called.  Copied from rules.gs and
+  // pinned against it by proof/walk-dj.mjs, like the three tables above.
+  var MOMENT_FIELD_WORDS = {
+    date: 'date', start: 'start time', end: 'finish time',
+    duration_min: 'how long it runs', label: 'name', kind: 'what it is',
+    approval: 'settled or not', active: 'on or off', purpose: 'what it is for',
+    room: 'room', order: 'where it sits in the order', cue_text: 'cue words',
+    pronunciation: 'how to say it', cue_owner: 'who calls the cue',
+    music_owner: 'who brings the music'
+  };
+
   // --- plain words for the states the brain keeps --------------------------
   var STAGE_WORDS = {
     draft: 'not sent yet', waiting: 'waiting on answers',
@@ -409,13 +420,7 @@
       // kind ("Something else"), never by the id the store files it under.
       // One asked for but not yet on the running order is "a new part of the night".
       var label = moment ? (moment.label || kindWords(moment.kind)) : 'a new part of the night';
-      var attr = { start: 'start time', end: 'finish time', date: 'date',
-                   cue_text: 'cue words', pronunciation: 'how to say it',
-                   duration_min: 'how long it runs', room: 'room',
-                   active: 'on or off', approval: 'settled or not',
-                   label: 'name', kind: 'what it is', purpose: 'what it is for',
-                   cue_owner: 'who calls the cue',
-                   music_owner: 'who brings the music' }[bits[2]] || bits[2];
+      var attr = MOMENT_FIELD_WORDS[bits[2]] || bits[2];
       return label + ' — ' + attr;
     }
     if (field.indexOf('open_items.') === 0) return 'an open question';
@@ -1115,7 +1120,8 @@
               ((line.affected || []).length
                 ? ' · this touched ' + line.affected.map(function (mid) {
                     var moment = momentById(event, mid);
-                    return moment ? (moment.label || mid) : mid;
+                    return moment ? (moment.label || kindWords(moment.kind))
+                                  : 'a part of the night';
                   }).join(', ')
                 : '') })
           ])

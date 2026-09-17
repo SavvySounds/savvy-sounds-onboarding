@@ -36,6 +36,28 @@ const MOMENT_FIELD_OWNER = {
   cue_owner: "running_order", music_owner: "prep",
 };
 
+// What each attribute of a moment is called in words.  dj.js keeps a copy of
+// this table and proof/walk-dj.mjs fails if the two ever drift apart: a screen
+// that shows "moments.m_closing.start" is showing a file name, not a question.
+const MOMENT_FIELD_WORDS = {
+  date: "date", start: "start time", end: "finish time",
+  duration_min: "how long it runs", label: "name", kind: "what it is",
+  approval: "settled or not", active: "on or off", purpose: "what it is for",
+  room: "room", order: "where it sits in the order", cue_text: "cue words",
+  pronunciation: "how to say it", cue_owner: "who calls the cue",
+  music_owner: "who brings the music",
+};
+
+// The form's own word for a kind of moment, e.g. "custom" -> "Something else".
+function _kind_words_of(kind, questions) {
+  for (const question of questions || []) {
+    if (question.id !== "moments") continue;
+    const labels = question.option_labels || {};
+    if (Object.prototype.hasOwnProperty.call(labels, kind)) return labels[kind];
+  }
+  return String(kind || "a part of the night");
+}
+
 // Answers that hold songs a client asked for, matched against the exclusions.
 const REQUEST_QIDS = ["requests", "must_plays", "dancing_opener",
   "dancing_closer", "awards_walkon"];
@@ -370,7 +392,7 @@ function effects(before, after, questions) {
   const new_awards = Array.from(awards_ids(after)).filter((mid) => !before_awards.has(mid)).sort();
   const cue_role = people.some((p) => p.role === "planner") ? "planner" : "approver";
   for (const mid of new_awards) {
-    const label = a_moments[mid].label || "the awards";
+    const label = a_moments[mid].label || _kind_words_of(a_moments[mid].kind, questions) || "the awards";
     offer(_item("oi_awards_names_" + mid, "Who are the award recipients, and how are their names pronounced?", "Read on mic during " + label + "; a wrong name is unrecoverable.", [mid], "approver", "rule:awards"));
     offer(_item("oi_awards_walkon_" + mid, "What walks each recipient on?", "Walk-on music has to be cued to the second.", [mid], "approver", "rule:awards"));
     offer(_item("oi_awards_cue_text_" + mid, "What are the exact words that start and stop the music?", "Miles goes on the words, not on a guess.", [mid], cue_role, "rule:awards"));
@@ -379,11 +401,17 @@ function effects(before, after, questions) {
   }
 
   // --- a moment's start / end / date changes
+  const soundcheck_moments = [];
   for (const [mid, moment] of Object.entries(a_moments)) {
     const old = b_moments[mid];
     if (!old || moment.active === false) continue;
     if (["date", "start", "end"].every((key) => _equal(old[key], moment[key]))) continue;
-    const windows = [_window(old), _window(moment)].filter(Boolean);
+    // A time written down for the FIRST time has not moved: there was no old
+    // clock for anything to have been planned around.  Filling in a new part
+    // of the night must not send everybody away to re-confirm nothing.
+    const was = _window(old);
+    if (!was) continue;
+    const windows = [was, _window(moment)].filter(Boolean);
     if (!windows.length) continue;
     const low = Math.min(...windows.map((w) => w[0]));
     const high = Math.max(...windows.map((w) => w[1]));
@@ -392,10 +420,15 @@ function effects(before, after, questions) {
       const span = _window(other);
       if (span && span[0] < high && span[1] > low && !cues.includes(other.moment_id)) cues.push(other.moment_id);
     }
-    const label = moment.label || mid;
+    const label = moment.label || _kind_words_of(moment.kind, questions);
     const moment_cue_role = moment.cue_owner || role_for("running_order");
     offer(_item("oi_cue_recheck_" + mid, "Re-confirm the cue for " + label + " at the new time", "The time moved; the words and the start point have to move with it.", [mid], moment_cue_role, "rule:time-change"));
-    offer(_item("oi_soundcheck_recheck_" + mid, "Re-check soundcheck and arrival against the new times", "Everything before the change was planned around the old clock.", [mid], role_for("production"), "rule:time-change"));
+    // The venue side is asked ONCE, about every part that moved.  The same
+    // sentence four times over is four people's worth of noise for one job.
+    soundcheck_moments.push(mid);
+  }
+  if (soundcheck_moments.length) {
+    offer(_item("oi_soundcheck_recheck", "Re-check soundcheck and arrival against the new times", "Everything before the change was planned around the old clock.", soundcheck_moments.slice(), role_for("production"), "rule:time-change"));
   }
 
   // --- the event date, venue or zone changes

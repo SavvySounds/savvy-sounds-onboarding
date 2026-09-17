@@ -73,7 +73,7 @@ clipboard must not change a byte).
     node --test corporate/tests/*.test.mjs
 
 One file per piece of the script, one `describe` per subject, every check
-named in words. Expect `pass 120`, `fail 0`, `skipped 0` in well under two
+named in words. Expect `pass 130`, `fail 0`, `skipped 0` in well under two
 seconds. Among them:
 
 - `rules.test.mjs` — every rule (while the port was being made, a parity
@@ -96,6 +96,30 @@ seconds. Among them:
 - `standin.test.mjs` — the stand-in on a private port: a foreign `Host` is
   turned away on both doors, a path cannot climb out, the answer comes
   through the redirect with the header a browser needs, once.
+
+### Nobody reads a file name, and nobody argues with themselves
+
+Three things Miles found while the first real booking was being filled in
+(2026-09-17), all of them one fault wearing three coats: **the store was
+writing a part of the night's file id into its name**, so every screen
+faithfully showed `m_custom`.
+
+| what to prove | what to look for |
+|---|---|
+| a part of the night nobody has named | called "Something else" (the form's own word) on his page, in an open question, on the clash screen and on the day sheet — never `m_custom`, never `custom` |
+| two answers to settle | the row is named "Awards — finish time", never `moments.m_awards.end`, and both times read `8:00 PM`, never `20:00` |
+| one person saving twice in a row | lands. Nobody is shown their own name as the other side of a clash |
+| a time written down for the FIRST time | raises nothing: nobody is sent back to re-confirm a clock that never existed |
+| times that move | one cue question per part that moved, and **one** soundcheck question for the venue side naming all of them |
+
+    node --test corporate/tests/doors.test.mjs corporate/tests/rules.test.mjs
+
+Watched on 2026-09-17, one break at a time (each red line named its own
+fault and nothing else): the self-conflict put back; the clash label back to
+the raw field; the first-time guard removed; the venue question back to one
+per part. `45 of 45` needles caught afterwards, including a needle that
+survived first time (nothing walked an unnamed part onto the day sheet) —
+that gap is now `the day sheet names an unnamed part of the night in words`.
 
 ### Prove the checks are reading THIS code
 
@@ -141,8 +165,8 @@ scratch folder; two real surnames are pinned by fingerprint and must not appear.
 Every needle is counted against the source before anything runs (a quote that
 matches nowhere or twice stops the run in words); the unbroken checks run
 first and a red baseline refuses to go on; each break gets a fresh copy of the
-folder in a temp directory the runner owns. Expect `39 of 39 caught.` (13 in
-the rules, 14 in the writer, 8 in the doors, 2 in the day sheet, 2 in the
+folder in a temp directory the runner owns. Expect `45 of 45 caught.` (14 in
+the rules, 19 in the writer, 7 in the doors, 3 in the day sheet, 2 in the
 stand-in's Host seam).
 
 ---
@@ -400,7 +424,7 @@ prints one line per reading with the number it measured. Nothing pops up,
 nothing makes a sound, and it kills its own server and its own Chrome before it
 prints the last line.
 
-Expect the last line to read **119 of 119 readings passed**, and pictures of
+Expect the last line to read **121 of 121 readings passed**, and pictures of
 the real screen in `corporate/proof/frames/` (not committed).
 
 What it measures, and what it read on 2026-09-14 (the last four rows added

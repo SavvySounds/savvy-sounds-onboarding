@@ -1046,7 +1046,7 @@ function jsTable(source, name) {
 function vocabularyPinned() {
   const rules = readFileSync(join(CORPORATE, 'script', 'rules.gs'), 'utf8');
   const screen = readFileSync(join(CORPORATE, 'dj', 'dj.js'), 'utf8');
-  for (const name of ['OWNER_ROLE', 'OWNER_FALLBACK', 'MOMENT_FIELD_OWNER']) {
+  for (const name of ['OWNER_ROLE', 'OWNER_FALLBACK', 'MOMENT_FIELD_OWNER', 'MOMENT_FIELD_WORDS']) {
     const brain = gsTable(rules, name);
     const page = jsTable(screen, name);
     if (!brain || !page) { mark(false, `${name}: could not be read out of both files`); continue; }

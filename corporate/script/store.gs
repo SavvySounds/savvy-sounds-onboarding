@@ -206,13 +206,39 @@ function changes_since(event_id, since) {
   return read_changes(event_id).filter(function (change) { return (change.revision || 0) > Number(since); });
 }
 
-function _label_for(field, questions) {
+function _label_for(field, questions, event) {
   if (field.indexOf("answers.") === 0) {
     var qid = field.split(".")[1];
     for (var i = 0; i < questions.length; i += 1) if (questions[i].id === qid) return questions[i].label;
     return qid;
   }
+  if (field.indexOf("moments.") === 0) {
+    // "moments.m_closing.start" is a file name.  Nobody is asked to settle a
+    // file name: they are asked about the finish time of Wrapping up.
+    var bits = field.split(".");
+    var attr = MOMENT_FIELD_WORDS[bits[2]] || bits[2];
+    var named = "";
+    for (var m = 0; m < (((event || {}).moments) || []).length; m += 1) {
+      if (event.moments[m].moment_id === bits[1]) {
+        named = event.moments[m].label || _kind_words(event.moments[m].kind, questions);
+      }
+    }
+    return (named || "a part of the night") + " \u2014 " + attr;
+  }
+  if (field === "people") return "who is on the event";
   return field;
+}
+
+function _kind_words(kind, questions) {
+  // questions.json keeps the words for every option beside the option itself;
+  // this file never spells them a second time.
+  for (var i = 0; i < (questions || []).length; i += 1) {
+    var question = questions[i];
+    if (question.id !== "moments") continue;
+    var labels = question.option_labels || {};
+    if (Object.prototype.hasOwnProperty.call(labels, kind)) return labels[kind];
+  }
+  return String(kind || "");
 }
 
 function _person_name(event, person_id) {
@@ -247,10 +273,22 @@ function save(event_id, actor, role, payload, questions) {
         base[field] = Object.prototype.hasOwnProperty.call(changed[0], field) ? changed[0][field] : current[field];
       });
       var combined = three_way(base, current, touched);
+      // A clash with YOUR OWN newer save is not two answers to settle: it is
+      // one person's second keystroke landing behind their first (two saves
+      // from one screen, or two of their own windows).  Their later value
+      // wins and nobody is asked to choose between themselves.
+      var mine_again = combined[1].filter(function (clash) {
+        var who = (changed[1][clash.field] || [null, null])[0];
+        return who && who === actor;
+      });
+      mine_again.forEach(function (clash) {
+        combined[0][clash.field] = clash.yours;
+        combined[1] = combined[1].filter(function (other) { return other.field !== clash.field; });
+      });
       if (combined[1].length) {
         var conflicts = combined[1].map(function (clash) {
           var by = changed[1][clash.field] || [null, null];
-          return {field: clash.field, label: _label_for(clash.field, questions),
+          return {field: clash.field, label: _label_for(clash.field, questions, event),
             yours: clash.yours, theirs: clash.theirs,
             theirs_by: _person_name(event, by[0]), theirs_at: by[1]};
         });
@@ -355,7 +393,10 @@ function _apply_fields(event, applied, actor, role, stamp, dry) {
     } else if (field.indexOf("moments.") === 0) {
       bits = field.split("."); moment = moments[bits[1]];
       if (!moment) {
-        moment = {moment_id: bits[1], kind: "custom", label: bits[1], date: null,
+        // A part of the night nobody has named yet has NO name: never its own
+        // file id.  Every screen falls back to the form's word for its kind
+        // ("Something else"), which is what a person would call it out loud.
+        moment = {moment_id: bits[1], kind: "custom", label: "", date: null,
           start: null, end: null, duration_min: 0, purpose: "", room: "",
           music_owner: "dj", cue_owner: "planner", cue_text: "",
           pronunciation: "", approval: "draft", active: true,

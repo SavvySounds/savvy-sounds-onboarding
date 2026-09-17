@@ -30,7 +30,7 @@ function _times(event) {
       if (moment.end < start) when += " (into the next day)";
     }
     return {moment_id: moment.moment_id, when: when, date: moment.date || "",
-      label: moment.label || moment.kind, room: moment.room || "", minutes: span_min(moment),
+      label: moment.label || _sheet_kind_words(moment.kind), room: moment.room || "", minutes: span_min(moment),
       music_owner: moment.music_owner || "", cue_owner: moment.cue_owner || "",
       cue_text: moment.cue_text || "", pronunciation: moment.pronunciation || "",
       approval: moment.approval || "draft"};
@@ -52,6 +52,13 @@ function _pool(event, moment) {
 function _ul(items, empty) {
   if (!items.length) return '<p class="none">' + _e(empty || "Nothing written down.") + "</p>";
   return "<ul>" + items.map(function (item) { return "<li>" + _e(item) + "</li>"; }).join("") + "</ul>";
+}
+
+// Same rule as the zone words above: the words live in questions.json.
+function _sheet_kind_words(kind) {
+  var question = (load_questions().questions || []).filter(function (q) { return q.id === "moments"; })[0] || {};
+  var labels = question.option_labels || {};
+  return Object.prototype.hasOwnProperty.call(labels, kind) ? labels[kind] : String(kind || "");
 }
 
 function html_sheet(event, built_at) {
