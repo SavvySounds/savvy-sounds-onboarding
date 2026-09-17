@@ -612,9 +612,11 @@ commits on main are that). So: (1) the CNAME record at the domain's DNS — it
 lives behind Miles's Squarespace Domains login, which Fable cannot sign into;
 (2) only when `dig +short CNAME clients-prep.savvysoundscollective.com` answers
 `savvysounds.github.io.`, the custom domain in Pages; (3) Enforce HTTPS once
-the green check shows. Step 1 of this list (home.js) is done and pushed. Until
-the record exists the pages live at
-`https://savvysounds.github.io/savvy-sounds-onboarding/`.
+the green check shows. **All three done 2026-09-16 evening** (the record was
+added through Miles's Squarespace Domains login with Fable driving; the
+custom domain set through the GitHub API; both addresses answered 200 within
+a minute, the old one redirecting to the new). The pages, and the wedding
+form, now live at `https://clients-prep.savvysoundscollective.com/`.
 
 1. The line in `corporate/home.js` is filled in (Fable) and committed; you
    press the push (that is the live button for the pages).
