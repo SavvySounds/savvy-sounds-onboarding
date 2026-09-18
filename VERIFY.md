@@ -34,13 +34,13 @@ answers".
 **Build.** `PAGE_PASSCODE='<the passcode>' python3 matt-genna/build.py`. Expect
 one `locked` line, the two `wrote` lines, "It came back byte for byte with the
 passcode, and did not open without it.", and the stocktake
-"8 moments, 10 songs, 0 players, 19 links out, 6 questions".
+"9 moments, 10 songs, 0 players, 19 links out, 4 questions".
 `PAGE_PASSCODE=short` must print "Not built." and write nothing.
 
 **Walk.** Serve the repo root, open `http://localhost:8765/matt-genna/`, then
 steps 1–3 and 7–8 of the `laura-ronnie/` walk: a wrong passcode reads "That's
 not it — check the passcode we sent you."; the right one with a capital first
-letter opens it (heading "Genna & Matt", 8 moments, 10 song cards); answer two
+letter opens it (heading "Genna & Matt", 9 moments, 10 song cards); answer two
 questions and the Send button carries only those two; nothing scrolls sideways
 at 375 wide.
 
