@@ -22,6 +22,35 @@ touching one of them writes its section here as part of the work.
 
 ---
 
+## The song-picks page for one couple — `craig-joelle/`
+
+**What it is.** The `matt-genna/` passcode page (Good Mood booking, "we"
+voice), plus a heart (must-play) and an X (leave out) on every planned song,
+125 of them, made from the gig folder's SET PLAN. Tapping a picked button
+again clears it. The couple's six locked moments show "LOCKED IN" with no
+buttons. 15 of Miles's own DJ edits carry a 45-second preview, each locked in
+its own `locked/pNN.enc` (cut from his Dropbox files into `src-audio/`, which
+is git-ignored like `content.html`). Every other song links to Spotify. Send
+opens their mail app to hello@savvysoundscollective.com, subject "Craig &
+Joelle — song picks", one line per picked song: `♥ MUST-PLAY  Title — Artist`.
+The passcode lives in the gig folder (`12 Couple song page PASSCODE.txt`),
+never in this repo.
+
+**Build.** `PAGE_PASSCODE='<the passcode>' python3 craig-joelle/build.py`.
+Expect 16 `locked` lines (page + p03–p17), "Every file came back byte for byte
+with the passcode, and none of them opened without it.", and the stocktake
+"5 moments, 0 songs, 15 players, 125 votes, 110 links out, 1 questions".
+`PAGE_PASSCODE=short` must print "Not built." and write nothing.
+
+**Walk** (at 375 wide; build with a throwaway passcode, walk, rebuild with the
+real one). A wrong passcode reads "That's not it — check the passcode we sent
+you."; the right one with a capital first letter opens it. All 15 previews
+show a player (45 s each); no sideways scroll. Heart one song, X another:
+the heart turns red, the X turns black and crosses the title off, the tally
+reads "1 must-play · 1 leave out", and the Send button's mail body holds
+exactly those two lines. Tap the heart again: it clears and the tally drops.
+Seen 2026-10-16.
+
 ## The passcode page for one couple — `matt-genna/`
 
 **What it is.** The same passcode page as `laura-ronnie/`, built from a copy of
