@@ -26,11 +26,12 @@ touching one of them writes its section here as part of the work.
 
 **What it is.** The `matt-genna/` passcode page (Good Mood booking, "we"
 voice), plus a heart (must-play) and an X (leave out) on every planned song,
-125 of them, made from the gig folder's SET PLAN. Tapping a picked button
+124 of them, made from the gig folder's SET PLAN. Tapping a picked button
 again clears it. The couple's six locked moments show "LOCKED IN" with no
 buttons. 15 of Miles's own DJ edits carry a 45-second preview, each locked in
 its own `locked/pNN.enc` (cut from his Dropbox files into `src-audio/`, which
-is git-ignored like `content.html`). Every other song links to Spotify. Send
+is git-ignored like `content.html`). Every other song links to Spotify, and every song also links to Apple
+Music (the exact track where Apple's search found it, a search page otherwise). Send
 opens their mail app to hello@savvysoundscollective.com, subject "Craig &
 Joelle — song picks", one line per picked song: `♥ MUST-PLAY  Title — Artist`.
 The passcode lives in the gig folder (`12 Couple song page PASSCODE.txt`),
@@ -39,7 +40,7 @@ never in this repo.
 **Build.** `PAGE_PASSCODE='<the passcode>' python3 craig-joelle/build.py`.
 Expect 16 `locked` lines (page + p03–p17), "Every file came back byte for byte
 with the passcode, and none of them opened without it.", and the stocktake
-"5 moments, 0 songs, 15 players, 125 votes, 110 links out, 1 questions".
+"5 moments, 0 songs, 15 players, 124 votes, 233 links out, 1 questions".
 `PAGE_PASSCODE=short` must print "Not built." and write nothing.
 
 **Walk** (at 375 wide; build with a throwaway passcode, walk, rebuild with the

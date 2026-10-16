@@ -446,6 +446,8 @@ STYLE = r"""<style>
   #lr-page .v-title{display:block; font-size:16px; font-weight:500; line-height:1.35;}
   #lr-page .v-artist{display:block; font-size:14px; color:var(--lr-ink-2);}
   #lr-page .v-listen{font-size:13.5px; margin-top:3px; display:inline-block;}
+  #lr-page .v-sep,#lr-page .v-also{font-size:13.5px; color:var(--lr-ink-2);}
+  #lr-page .v-also{display:inline-block; margin-top:6px;}
   #lr-page .v-lock{
     font-family:var(--lr-mono); font-size:11.5px; letter-spacing:.03em;
     color:var(--lr-green); margin-top:3px; display:block;
