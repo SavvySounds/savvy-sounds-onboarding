@@ -22,35 +22,17 @@ touching one of them writes its section here as part of the work.
 
 ---
 
-## The song-picks page for one couple — `craig-joelle/`
+## The song-picks page — corrected release
 
-**What it is.** The `matt-genna/` passcode page (Good Mood booking, "we"
-voice), plus a heart (must-play) and an X (leave out) on every planned song,
-124 of them, made from the gig folder's SET PLAN. Tapping a picked button
-again clears it. The couple's six locked moments show "LOCKED IN" with no
-buttons. 15 of Miles's own DJ edits carry a 45-second preview, each locked in
-its own `locked/pNN.enc` (cut from his Dropbox files into `src-audio/`, which
-is git-ignored like `content.html`). Every other song links to Spotify, and every song also links to Apple
-Music (the exact track where Apple's search found it, a search page otherwise). Send
-opens their mail app to hello@savvysoundscollective.com, subject "Craig &
-Joelle — song picks", one line per picked song: `♥ MUST-PLAY  Title — Artist`.
-The passcode lives in the gig folder (`12 Couple song page PASSCODE.txt`),
-never in this repo.
+The current private authoring source is the isolated `client-page` bundle beside the corrected review packet. The older builder in this repository predates this release and must not be used to regenerate it. Maintain the corrected bundle, then copy only its tested `dist/` files into this feature folder.
 
-**Build.** `PAGE_PASSCODE='<the passcode>' python3 craig-joelle/build.py`.
-Expect 16 `locked` lines (page + p03–p17), "Every file came back byte for byte
-with the passcode, and none of them opened without it.", and the stocktake
-"5 moments, 0 songs, 15 players, 124 votes, 233 links out, 1 questions".
-`PAGE_PASSCODE=short` must print "Not built." and write nothing.
+The passcode remains unchanged. Content and all 15 audio previews are encrypted. The page includes 141 listening entries, 126 optional choice groups and 15 locked entries. The exact 71 unique source-playlist selections and all preview bytes are preserved. Browser-local hearts, exclusions and notes survive refresh and browser restart. They do not sync to other browsers or addresses.
 
-**Walk** (at 375 wide; build with a throwaway passcode, walk, rebuild with the
-real one). A wrong passcode reads "That's not it — check the passcode we sent
-you."; the right one with a capital first letter opens it. All 15 previews
-show a player (45 s each); no sideways scroll. Heart one song, X another:
-the heart turns red, the X turns black and crosses the title off, the tally
-reads "1 must-play · 1 leave out", and the Send button's mail body holds
-exactly those two lines. Tap the heart again: it clears and the tally drops.
-Seen 2026-10-16.
+Return flow: Review & email picks opens the complete list. Copy or download preserves every entry and the notes. The email link opens a draft; the visitor must send it in their own mail app. Long lists use copy/paste or attachment instead of a potentially truncated mail URL. No delivery claim is displayed.
+
+Before a release, run `python3 verify-package.py` and `node --test verify-client.cjs verify-mutations.cjs` inside the private bundle. The test permits only local GETs and intercepts mail links, clipboard writes and downloads. It proves persistence after browser restart, unchanged metadata/audio, complete exports, failure recovery, keyboard controls and phone/desktop layouts. Deliberate broken-save and wrong-recipient copies must fail. No real test email is sent.
+
+After deployment, compare every served HTML/encrypted file against the tested package, confirm HTTPS and the passcode door, and verify the live page with outgoing actions intercepted. The original staging review remains separate. The standalone route is the intended client link; no separate live Squarespace edit is included in this release.
 
 ## The passcode page for one couple — `matt-genna/`
 

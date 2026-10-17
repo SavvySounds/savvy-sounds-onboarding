@@ -1,14 +1,4 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-<meta charset="UTF-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>Joelle &amp; Craig</title>
-<link rel="preconnect" href="https://fonts.googleapis.com" />
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet" />
-<style>html,body{margin:0; padding:0; background:#F3EEE4; color-scheme:light;}</style>
-<style>
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="robots" content="noindex,nofollow"><meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; connect-src 'self'; media-src blob:; img-src 'self' data:; base-uri 'none'; form-action 'none'; object-src 'none'"><title>Joelle &amp; Craig</title><style>
   /* ------------------------------------------------------------------ *
      Everything below is scoped to #lr-page. Nothing here styles a bare
      body, h1, p, input or button, so this can be dropped into a page that
@@ -306,10 +296,33 @@
       animation:none !important; transition:none !important;
     }
   }
-</style>
-</head>
-<body>
-<div id="lr-page">
+
+html,body{margin:0; padding:0; background:#F3EEE4; color-scheme:light;}
+  body{margin:0;background:#F3EEE4;}
+  #lr-page{left:auto;width:100%;margin:0;}
+  #lr-page .vote > legend.sr{width:1px;height:1px;}
+  #lr-page .v-title,#lr-page .v-artist{overflow-wrap:anywhere;}
+  #lr-page .v-note{font-size:13.5px;color:var(--lr-ink-2);margin:8px 0 0;}
+  #lr-page .moment-list{margin-top:12px;}
+  #lr-page .moment-list summary{cursor:pointer;min-height:44px;display:list-item;padding:10px 0;text-decoration:underline;text-underline-offset:3px;color:var(--lr-gold);}
+  #lr-page .moment-list summary:focus-visible{outline:2px solid var(--lr-green);outline-offset:2px;}
+  #lr-page .btn[disabled]{cursor:default;opacity:.65;}
+  #lr-page .v-listen{min-height:44px;padding:10px 0;}
+  #lr-page .v-sep{padding:0 3px;}
+  #lr-page .v-btn input{width:100%;height:100%;}
+  @media(max-width:400px){#lr-page .vote{flex-wrap:wrap;}#lr-page .v-text{flex-basis:100%;}#lr-page .v-btns{margin:2px 0 4px;}}
+</style><style>
+#lr-page #picks-review{margin-top:32px;border-top:1px solid var(--lr-line);padding-top:24px;}
+#lr-page #picks-report{font-size:16px;line-height:1.5;}
+#lr-page #save-status{font-size:14px;line-height:1.5;}
+#lr-page .actions .btn{min-height:44px;white-space:normal;max-width:100%;}
+#lr-page #picks-review[hidden]{display:none;}
+#lr-page a.btn{display:inline-flex;align-items:center;text-decoration:none;}
+#lr-page #review-heading{font-size:20px;font-weight:600;margin-bottom:12px;}
+#lr-page #picks-review p{margin:10px 0;}
+#lr-page #review-heading:focus{outline:2px solid var(--lr-green);outline-offset:4px;}
+#lr-page .v-title,#lr-page .v-artist,#lr-page #picks-review p{overflow-wrap:anywhere;}
+</style></head><body><div id="lr-page">
   <div id="lr-door" class="door">
     <p class="brand">Good Mood</p>
     <p class="door-lede">A page for the two of you.</p>
@@ -325,8 +338,160 @@
     <p id="lr-msg" role="alert"></p>
   </div>
   <div id="lr-body" class="wrap" hidden></div>
-</div>
-<script>
+</div><script>
+/* One writer for this page's saved picks; no service, sending API or credentials. */
+function installPicks(root, recipient, subject) {
+  'use strict';
+  const KEY = 'cj-song-picks-2026-10-18-v1';
+  const form = root.querySelector('#answers');
+  const groups = [...root.querySelectorAll('.vote:not(.locked)')];
+  const note = root.querySelector('#q-missing');
+  const saved = root.querySelector('#save-status');
+  const say = root.querySelector('#say');
+  const review = root.querySelector('#picks-review');
+  const report = root.querySelector('#picks-report');
+  const email = root.querySelector('#email-link');
+  let saveFailed = false;
+  const empty = () => ({version:1, picks:{}, note:''});
+  function read() {
+    const raw = localStorage.getItem(KEY);
+    if (!raw) return empty();
+    const value = JSON.parse(raw);
+    if (value.version !== 1 || !value.picks || typeof value.picks !== 'object' || Array.isArray(value.picks) || typeof value.note !== 'string') throw new Error('saved data unavailable');
+    const clean = empty();
+    for (const group of groups) {
+      const pick = value.picks[group.dataset.row];
+      if (pick === 'heart' || pick === 'out') clean.picks[group.dataset.row] = pick;
+    }
+    clean.note = value.note;
+    return clean;
+  }
+  function restore(state) {
+    for (const group of groups) {
+      for (const input of group.querySelectorAll('input')) input.checked = input.closest('label').classList.contains(state.picks[group.dataset.row] || 'unmarked');
+    }
+    note.value = state.note;
+    refresh();
+  }
+  function save(group) {
+    let state;
+    try { state = read(); } catch (_) { state = empty();
+      for (const row of groups) {
+        const pick = row.querySelector('input:checked');
+        if (pick) state.picks[row.dataset.row] = pick.closest('label').classList.contains('heart') ? 'heart' : 'out';
+      }
+      state.note = note.value;
+    }
+    if (group) {
+      const pick = group.querySelector('input:checked');
+      if (pick) state.picks[group.dataset.row] = pick.closest('label').classList.contains('heart') ? 'heart' : 'out';
+      else delete state.picks[group.dataset.row];
+    } else state.note = note.value;
+    try {
+      localStorage.setItem(KEY, JSON.stringify(state));
+      saveFailed = false;
+      saved.textContent = 'Saved on this browser. Nothing has been sent.';
+    } catch (_) {
+      saveFailed = true;
+      saved.textContent = 'This browser cannot save your picks. Keep this tab open and copy or download them below before leaving.';
+    }
+    refresh();
+  }
+  function textReport() {
+    const buckets = {'MUST-PLAY':[], 'LEAVE OUT':[], 'DJ’S CALL — UNMARKED':[], 'ALREADY LOCKED IN':[]};
+    for (const group of root.querySelectorAll('.vote')) {
+      const pick = group.querySelector('input:checked');
+      const kind = group.classList.contains('locked') ? 'ALREADY LOCKED IN' : !pick ? 'DJ’S CALL — UNMARKED' : pick.closest('label').classList.contains('heart') ? 'MUST-PLAY' : 'LEAVE OUT';
+      const title = group.querySelector('.v-title').textContent.trim();
+      const artist = group.querySelector('.v-artist').textContent.trim();
+      const section = group.closest('section').querySelector('h2').textContent.trim();
+      const lock = group.querySelector('.v-lock');
+      buckets[kind].push(`[${group.dataset.row}] ${title} — ${artist} (${section})${lock ? ' · '+lock.textContent.trim() : ''}`);
+    }
+    const header = `${subject}\n${root.querySelector('.hero-when').textContent.trim()}\n\n${buckets['MUST-PLAY'].length} must-play · ${buckets['LEAVE OUT'].length} leave out · ${buckets['DJ’S CALL — UNMARKED'].length} unmarked · ${buckets['ALREADY LOCKED IN'].length} locked\nUnmarked songs are left to the DJ. Locked songs remain agreed picks.`;
+    return header + '\n\n' + Object.entries(buckets).map(([name,lines]) => name+'\n'+(lines.join('\n') || '(None)')).join('\n\n') + '\n\nANYTHING WE MISSED?\n' + (note.value.trim() || '(No additional notes)');
+  }
+  function updateReport() {
+    const body = textReport();
+    report.value = body;
+    const full = 'mailto:'+recipient+'?subject='+encodeURIComponent(subject)+'&body='+encodeURIComponent(body);
+    const long = full.length > 1800;
+    // Mail apps have different URL limits. Long lists stay complete in copy/download.
+    email.href = long ? 'mailto:'+recipient+'?subject='+encodeURIComponent(subject) : full;
+    root.querySelector('#email-help').textContent = long
+      ? 'Copy the complete list below, open your email, then paste it into the message and press Send. Nothing is sent from this page.'
+      : 'Open your email to review the filled-in message, then press Send there. Nothing is sent from this page.';
+    root.querySelector('#copy-btn').textContent = 'Copy the complete list';
+  }
+  function refresh() {
+    let heart = 0, out = 0;
+    for (const group of groups) {
+      const pick = group.querySelector('input:checked');
+      const excluded = Boolean(pick && pick.closest('label').classList.contains('out'));
+      group.classList.toggle('is-out', excluded);
+      for (const input of group.querySelectorAll('input')) input.closest('label').classList.toggle('on', input.checked);
+      if (pick) excluded ? out++ : heart++;
+    }
+    root.querySelector('#tally').textContent = `${heart} must-play · ${out} leave out · ${groups.length-heart-out} left to us`;
+    if (!review.hidden) updateReport();
+  }
+  form.addEventListener('submit', event => event.preventDefault());
+  for (const group of groups) {
+    let wasChecked = false;
+    group.addEventListener('pointerdown', event => {
+      const label = event.target.closest('.v-btn');
+      wasChecked = Boolean(label && label.querySelector('input').checked);
+    });
+    group.addEventListener('click', event => {
+      if (!event.target.matches('input[type=radio]')) return;
+      if (wasChecked) event.target.checked = false;
+      wasChecked = false;
+      save(group);
+    });
+    group.addEventListener('keydown', event => {
+      wasChecked = false;
+      if (event.code === 'Space' && event.target.matches('input[type=radio]') && event.target.checked) {
+        event.preventDefault(); event.target.checked = false; save(group);
+      }
+    });
+    group.addEventListener('change', () => save(group));
+  }
+  note.addEventListener('input', () => save(null));
+  root.querySelector('#send-btn').addEventListener('click', () => {
+    review.hidden = false; updateReport();
+    root.querySelector('#review-heading').focus();
+  });
+  root.querySelector('#copy-btn').addEventListener('click', async () => {
+    updateReport();
+    try {
+      await navigator.clipboard.writeText(report.value);
+      root.querySelector('#copy-btn').textContent = 'Copied';
+      say.textContent = 'Copied the complete list. Open your email, paste it in, and press Send there.';
+    } catch (_) {
+      report.focus(); report.select();
+      say.textContent = 'Automatic copying is unavailable. The complete list is selected: use Copy, or download it below and attach it to your email.';
+    }
+  });
+  root.querySelector('#download-btn').addEventListener('click', () => {
+    const url = URL.createObjectURL(new Blob([textReport()], {type:'text/plain;charset=utf-8'}));
+    const a = document.createElement('a'); a.href = url; a.download = 'song-picks.txt';
+    a.hidden = true; root.appendChild(a); a.click(); a.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
+    say.textContent = 'Your download contains the complete list. Attach it to your email if you prefer.';
+  });
+  email.addEventListener('click', () => {
+    say.textContent = 'Your email app may open now. Paste the copied list if the message is empty, then press Send there. If no email app opens, use the copied list in your usual email.';
+  });
+  window.addEventListener('storage', event => {
+    if (event.key !== KEY) return;
+    try { restore(read()); saved.textContent = 'Updated from your other tab. Nothing has been sent.'; }
+    catch (_) { saved.textContent = 'Saved picks could not be read. Keep this tab open and copy or download your list.'; }
+  });
+  window.addEventListener('beforeunload', event => { if (saveFailed) { event.preventDefault(); event.returnValue = ''; } });
+  try { restore(read()); saved.textContent = 'Picks are saved on this browser. Nothing has been sent.'; }
+  catch (_) { saveFailed = true; saved.textContent = 'Saved picks could not be read. Check your choices, then copy or download your list before leaving.'; refresh(); }
+}
+
 /*
   The door, browser side. Same lock as the Conduit's members' area:
   OpenSSL's salted format, PBKDF2-HMAC-SHA256 100000 rounds, AES-256-CBC.
@@ -346,7 +511,7 @@
   var MAGIC = "Salted__";
   var ITERATIONS = 100000;
   var BASE = "";
-  var MAILTO = "hello@savvysoundscollective.com";
+  var MAILTO = "miles@thisisgoodmood.com";
   var SUBJECT = "Craig & Joelle — song picks";
 
   var rootEl, doorEl, bodyEl, formEl, passEl, btnEl, msgEl;
@@ -419,13 +584,13 @@
   }
 
   function remember(passcode) {
-    try { sessionStorage.setItem("lr-pass", passcode); } catch (e) { /* private window */ }
+    try { sessionStorage.setItem("cj-pass-2026-10-18", passcode); } catch (e) { /* private window */ }
   }
   function remembered() {
-    try { return sessionStorage.getItem("lr-pass") || ""; } catch (e) { return ""; }
+    try { return sessionStorage.getItem("cj-pass-2026-10-18") || ""; } catch (e) { return ""; }
   }
   function forget() {
-    try { sessionStorage.removeItem("lr-pass"); } catch (e) { /* nothing to do */ }
+    try { sessionStorage.removeItem("cj-pass-2026-10-18"); } catch (e) { /* nothing to do */ }
   }
 
   // ------------------------------------------------------------------ //
@@ -520,6 +685,7 @@
     // window is; measure again now there is something in it.
     fillWindow();
 
+    passEl.value = "";
     wireForm();
     // Every preview on the page, each from its own locked file.
     bodyEl.querySelectorAll("audio[data-enc]").forEach(function (a) {
@@ -585,121 +751,8 @@
      Everything of the couple's lives inside the locked page; a copy of
      their questions sitting in the door would hand over the very thing
      the lock is for. */
-  function answers() {
-    var form = bodyEl.querySelector("#answers");
-    if (!form) return "";
-    var lines = [];
-    var done = {};
-    var fields = form.querySelectorAll("input, textarea");
+  function wireForm() { installPicks(bodyEl, MAILTO, SUBJECT); }
 
-    for (var i = 0; i < fields.length; i++) {
-      var el = fields[i];
-
-      if (el.type === "radio") {
-        if (done[el.name]) continue;      // one line per set of choices
-        done[el.name] = true;
-        var picked = form.querySelector('input[name="' + el.name + '"]:checked');
-        if (!picked) continue;
-        var box = el.closest("fieldset");
-        var legend = box ? box.querySelector("legend") : null;
-        if (box && box.classList.contains("vote")) {
-          var vt = box.querySelector(".v-title"), va = box.querySelector(".v-artist");
-          lines.push(picked.value + "  " + vt.textContent.trim() + " \u2014 " + va.textContent.trim());
-          continue;
-        }
-        lines.push((legend ? legend.textContent.trim() : el.name)
-                   + "\n" + picked.value);
-        continue;
-      }
-
-      var value = el.value.trim();
-      if (!value) continue;
-      var label = el.id ? form.querySelector('label[for="' + el.id + '"]') : null;
-      lines.push((label ? label.textContent.trim() : (el.name || el.id))
-                 + "\n" + value);
-    }
-    return lines.join("\n\n");
-  }
-
-  function mailto(body) {
-    return "mailto:" + MAILTO
-      + "?subject=" + encodeURIComponent(SUBJECT)
-      + "&body=" + encodeURIComponent(body);
-  }
-
-  function wireForm() {
-    var form = bodyEl.querySelector("#answers");
-    var send = bodyEl.querySelector("#send-btn");
-    var copy = bodyEl.querySelector("#copy-btn");
-    var say = bodyEl.querySelector("#say");
-    if (!form || !send || !copy || !say) return;
-
-    // Kept current as they type, so the button always carries exactly what
-    // it would send.
-    var tally = bodyEl.querySelector("#tally");
-    function refresh() {
-      send.dataset.mailto = mailto(answers());
-      /* Light up what is picked. Done here rather than with :has() in the
-         style, which older iPhones do not read. */
-      form.querySelectorAll(".v-btn").forEach(function (b) {
-        b.classList.toggle("on", b.querySelector("input").checked);
-      });
-      form.querySelectorAll(".vote").forEach(function (v) {
-        var o = v.querySelector(".out input");
-        v.classList.toggle("is-out", !!(o && o.checked));
-      });
-      if (tally) {
-        var h = form.querySelectorAll(".heart input:checked").length;
-        var x = form.querySelectorAll(".out input:checked").length;
-        tally.textContent = h + " must-play \u00b7 " + x + " leave out";
-      }
-    }
-    /* A heart or an X tapped a second time lets go, so a song can go back to
-       "your call". Radios cannot do that on their own. */
-    var was = null;
-    form.addEventListener("pointerdown", function (ev) {
-      var b = ev.target.closest(".v-btn");
-      was = b ? b.querySelector("input").checked : null;
-    });
-    form.addEventListener("click", function (ev) {
-      var b = ev.target.closest(".v-btn");
-      if (!b || ev.target.tagName !== "INPUT") return;
-      if (was) { ev.target.checked = false; refresh(); }
-      was = null;
-    });
-    form.addEventListener("input", refresh);
-    form.addEventListener("change", refresh);
-    refresh();
-
-    send.addEventListener("click", function () {
-      var body = answers();
-      if (!body) { say.textContent = "Nothing filled in yet."; return; }
-      refresh();
-      say.textContent = "Opening your mail app…";
-      window.location.href = send.dataset.mailto;
-    });
-
-    var back = null;
-    copy.addEventListener("click", async function () {
-      var body = answers();
-      if (!body) { say.textContent = "Nothing filled in yet."; return; }
-      try {
-        await navigator.clipboard.writeText(body);
-        copy.textContent = "Copied";
-        copy.classList.add("done");
-        say.textContent = "";
-        clearTimeout(back);
-        back = setTimeout(function () {
-          copy.textContent = "Copy the answers";
-          copy.classList.remove("done");
-        }, 3000);
-      } catch (e) {
-        say.textContent = "Couldn't copy — use Send your answers instead.";
-      }
-    });
-  }
-
-  // ------------------------------------------------------------------ //
   // Starting up, whenever the host page happens to get here.
   // ------------------------------------------------------------------ //
 
@@ -748,6 +801,4 @@
     start();
   }
 })();
-</script>
-</body>
-</html>
+</script></body></html>
